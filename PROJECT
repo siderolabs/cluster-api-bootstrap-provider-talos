@@ -1,0 +1,7 @@
+version: "2"
+domain: cluster.x-k8s.io
+repo: github.com/talos-systems/cluster-api-bootstrap-provider-talos
+resources:
+- group: bootstrap
+  version: v1alpha2
+  kind: TalosConfig
