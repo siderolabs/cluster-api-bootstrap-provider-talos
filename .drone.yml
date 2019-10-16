@@ -1,0 +1,100 @@
+---
+kind: pipeline
+name: default
+
+workspace:
+  base: /go
+  path: src/github.com/talos-systems/cluster-api-bootstrap-provider-talos
+
+services:
+  - name: docker
+    image: docker:19.03-dind
+    entrypoint:
+    - dockerd
+    command:
+    - --dns=8.8.8.8
+    - --dns=8.8.4.4
+    - --mtu=1440
+    - --log-level=error
+    privileged: true
+    volumes:
+    - name: dockersock
+      path: /var/run
+    - name: manifests
+      path: /tmp/manifests
+
+steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --tags
+    when:
+      event: tag
+
+  - name: test
+    image: autonomy/build-container:latest
+    commands:
+      - sleep 5
+      - make test
+    volumes:
+      - name: dockersock
+        path: /var/run
+    depends_on:
+      - fetch
+
+  - name: build
+    image: autonomy/build-container:latest
+    pull: always
+    commands:
+      - make docker-build
+    volumes:
+      - name: dockersock
+        path: /var/run
+    depends_on:
+      - test
+
+  - name: push
+    image: autonomy/build-container:latest
+    pull: always
+    environment:
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+    commands:
+      - make login
+      - make docker-push
+    volumes:
+      - name: dockersock
+        path: /var/run
+    when:
+      event:
+        exclude:
+          - pull_request
+    depends_on:
+      - build
+
+  - name: release
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      draft: true
+      files:
+        - /tmp/manifests/*
+      checksum:
+        - sha256
+        - sha512
+    volumes:
+      - name: manifests
+        path: /tmp/manifests
+    depends_on:
+      - push
+    when:
+      event: tag
+
+volumes:
+  - name: dockersock
+    temp: {}
+  - name: manifests
+    temp: {}
