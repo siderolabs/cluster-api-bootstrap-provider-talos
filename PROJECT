@@ -5,3 +5,6 @@ resources:
 - group: bootstrap
   version: v1alpha2
   kind: TalosConfig
+- group: bootstrap
+  version: v1alpha2
+  kind: TalosConfigTemplate

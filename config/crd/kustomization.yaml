@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/bootstrap.cluster.x-k8s.io_talosconfigs.yaml
+- bases/bootstrap.cluster.x-k8s.io_talosconfigtemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

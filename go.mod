@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/talos-systems/talos v0.3.0-alpha.1
+	github.com/talos-systems/talos v0.3.0-alpha.1.0.20191016174505-d0111fe617bb
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
