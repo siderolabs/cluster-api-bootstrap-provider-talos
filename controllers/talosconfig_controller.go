@@ -22,15 +22,15 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 )
 
 const (
@@ -100,7 +100,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	// Lookup the cluster the machine is associated with
-	cluster, err := util.GetOwnerCluster(ctx, r.Client, machine.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
 		log.Error(err, "could not get cluster by machine metadata")
 		return ctrl.Result{}, err
@@ -136,37 +136,49 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		machineType = generate.TypeControlPlane
 	}
 
-	input, err := generate.NewInput(cluster.ObjectMeta.Name, []string{cluster.Status.APIEndpoints[0].Host}, *machine.Spec.Version)
+	input, err := generate.NewInput(cluster.ObjectMeta.Name, "https://"+cluster.Status.APIEndpoints[0].Host+":443", *machine.Spec.Version)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	certSecret, err := r.fetchCertSecret(ctx, config, cluster.ObjectMeta.Name)
+	inputSecret, err := r.fetchInputSecret(ctx, config, cluster.ObjectMeta.Name)
+	if machineType == generate.TypeInit && k8serrors.IsNotFound(err) {
+		err = r.writeInputSecret(ctx, config, cluster.ObjectMeta.Name, input)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	certs := &generate.Certs{}
+	kubeTokens := &generate.KubeadmTokens{}
+	trustdInfo := &generate.TrustdInfo{}
+
+	err = yaml.Unmarshal(inputSecret.Data["certs"], certs)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Push generated certs into secret if they didn't exist. Otherwise overwrite the ones we just generated.
-	if machineType == generate.TypeInit && certSecret == nil {
-		err = r.writeCertSecret(ctx, config, cluster.ObjectMeta.Name, input.Certs)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	} else {
-		certs := &generate.Certs{}
-
-		err = yaml.Unmarshal(certSecret.Data["certs"], certs)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		input.Certs = certs
+	err = yaml.Unmarshal(inputSecret.Data["kubeTokens"], kubeTokens)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
+
+	err = yaml.Unmarshal(inputSecret.Data["trustdInfo"], trustdInfo)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	input.Certs = certs
+	input.KubeadmTokens = kubeTokens
+	input.TrustdInfo = trustdInfo
 
 	talosConfig := &talosConfig{
 		Context: input.ClusterName,
 		Contexts: map[string]*talosConfigContext{
 			input.ClusterName: {
-				Target: input.MasterIPs[0],
+				Target: "",
 				CA:     base64.StdEncoding.EncodeToString(input.Certs.OS.Crt),
 				Crt:    base64.StdEncoding.EncodeToString(input.Certs.Admin.Crt),
 				Key:    base64.StdEncoding.EncodeToString(input.Certs.Admin.Key),

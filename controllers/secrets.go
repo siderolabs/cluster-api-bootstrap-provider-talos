@@ -22,31 +22,38 @@ import (
 	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *TalosConfigReconciler) fetchCertSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string) (*corev1.Secret, error) {
+func (r *TalosConfigReconciler) fetchInputSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string) (*corev1.Secret, error) {
 
-	certSecret := &corev1.Secret{}
+	inputSecret := &corev1.Secret{}
 	err := r.Client.Get(context.Background(), client.ObjectKey{
 		Namespace: config.GetNamespace(),
 		Name:      clusterName,
-	}, certSecret)
+	}, inputSecret)
 
-	if err != nil && k8serrors.IsNotFound(err) {
-		return nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
 
-	return certSecret, nil
+	return inputSecret, nil
 }
 
-func (r *TalosConfigReconciler) writeCertSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string, certs *generate.Certs) error {
+func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string, input *generate.Input) error {
 
-	certMarshal, err := yaml.Marshal(certs)
+	certMarshal, err := yaml.Marshal(input.Certs)
+	if err != nil {
+		return err
+	}
+
+	kubeTokenMarshal, err := yaml.Marshal(input.KubeadmTokens)
+	if err != nil {
+		return err
+	}
+
+	trustdInfoMarshal, err := yaml.Marshal(input.TrustdInfo)
 	if err != nil {
 		return err
 	}
@@ -56,7 +63,11 @@ func (r *TalosConfigReconciler) writeCertSecret(ctx context.Context, config *boo
 			Namespace: config.GetNamespace(),
 			Name:      clusterName,
 		},
-		Data: map[string][]byte{"certs": certMarshal},
+		Data: map[string][]byte{
+			"certs":      certMarshal,
+			"kubeTokens": kubeTokenMarshal,
+			"trustdInfo": trustdInfoMarshal,
+		},
 	}
 
 	err = r.Client.Create(ctx, certSecret)
