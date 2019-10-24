@@ -255,8 +255,11 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/syndtr/gocapability v0.0.0-20180223013746-33e07d32887e/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
+github.com/talos-systems/talos v0.2.0 h1:go8501TGzTNzm5InAbcrVGL0tdeU117sIQX8XzIzw34=
 github.com/talos-systems/talos v0.3.0-alpha.1.0.20191016174505-d0111fe617bb h1:bzdPYYeeF06h9hgq1PwGjLfV0k/+6cs3eeUFYT/55hM=
 github.com/talos-systems/talos v0.3.0-alpha.1.0.20191016174505-d0111fe617bb/go.mod h1:22KcKkZ3l69bN1STZ4g4dzs3FapgnFxnNY8xEQOK694=
+github.com/talos-systems/talos v0.3.0-alpha.4 h1:eCIAjzji5cCgIpD8HxWu8qGPnj1gA+y2jEpvfR1vIWg=
+github.com/talos-systems/talos v0.3.0-alpha.4/go.mod h1:22KcKkZ3l69bN1STZ4g4dzs3FapgnFxnNY8xEQOK694=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/u-root/u-root v6.0.0+incompatible/go.mod h1:RYkpo8pTHrNjW08opNd/U6p/RJE7K0D8fXO0d47+3YY=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=

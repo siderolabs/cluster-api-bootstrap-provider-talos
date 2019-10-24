@@ -34,7 +34,7 @@ FROM test AS build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
 # Copy the controller-manager into a thin image
-FROM scratch
+FROM gcr.io/distroless/static:latest
 WORKDIR /
 COPY --from=build /go/src/github.com/talos-systems/cluster-api-bootstrap-provider-talos/manager .
 ENTRYPOINT ["/manager"]

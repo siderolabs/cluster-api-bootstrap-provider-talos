@@ -1,5 +1,5 @@
 TAG ?= $(shell gitmeta image tag)
-REPO ?= autonomy/cluster-api-provider-talos
+REPO ?= autonomy/cluster-api-talos-controller
 
 
 # Image URL to use all building/pushing image targets
