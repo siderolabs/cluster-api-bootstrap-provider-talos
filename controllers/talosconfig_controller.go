@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
@@ -136,7 +137,11 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		machineType = generate.TypeControlPlane
 	}
 
-	input, err := generate.NewInput(cluster.ObjectMeta.Name, "https://"+cluster.Status.APIEndpoints[0].Host+":443", *machine.Spec.Version)
+	APIEndpointPort := strconv.Itoa(cluster.Status.APIEndpoints[0].Port)
+	input, err := generate.NewInput(cluster.ObjectMeta.Name,
+		"https://"+cluster.Status.APIEndpoints[0].Host+":"+APIEndpointPort,
+		*machine.Spec.Version,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
