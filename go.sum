@@ -260,6 +260,10 @@ github.com/talos-systems/talos v0.3.0-alpha.1.0.20191016174505-d0111fe617bb h1:b
 github.com/talos-systems/talos v0.3.0-alpha.1.0.20191016174505-d0111fe617bb/go.mod h1:22KcKkZ3l69bN1STZ4g4dzs3FapgnFxnNY8xEQOK694=
 github.com/talos-systems/talos v0.3.0-alpha.4 h1:eCIAjzji5cCgIpD8HxWu8qGPnj1gA+y2jEpvfR1vIWg=
 github.com/talos-systems/talos v0.3.0-alpha.4/go.mod h1:22KcKkZ3l69bN1STZ4g4dzs3FapgnFxnNY8xEQOK694=
+github.com/talos-systems/talos v0.3.0-alpha.5 h1:lH8azTDAukRyZI1zENww1IBW93u1pIn2wfeuikziwDM=
+github.com/talos-systems/talos v0.3.0-alpha.5/go.mod h1:o2aQ668ToodnHREccDTZi6dVxKHRmr0vlcsCDVHkn7Q=
+github.com/talos-systems/talos v0.3.0-alpha.5.0.20191105183433-4b3cc34ab044 h1:gi+hLvwB0oGPKi165T4fliiui42m3ReF+QfxmvXGx1s=
+github.com/talos-systems/talos v0.3.0-alpha.5.0.20191105183433-4b3cc34ab044/go.mod h1:o2aQ668ToodnHREccDTZi6dVxKHRmr0vlcsCDVHkn7Q=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/u-root/u-root v6.0.0+incompatible/go.mod h1:RYkpo8pTHrNjW08opNd/U6p/RJE7K0D8fXO0d47+3YY=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
@@ -394,6 +398,7 @@ gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0/go.mod h1:WDnlLJ4WF5VGsH/HVa
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=

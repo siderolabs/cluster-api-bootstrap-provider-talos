@@ -148,7 +148,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 
 	inputSecret, err := r.fetchInputSecret(ctx, config, cluster.ObjectMeta.Name)
 	if machineType == generate.TypeInit && k8serrors.IsNotFound(err) {
-		err = r.writeInputSecret(ctx, config, cluster.ObjectMeta.Name, input)
+		inputSecret, err = r.writeInputSecret(ctx, config, cluster.ObjectMeta.Name, input)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

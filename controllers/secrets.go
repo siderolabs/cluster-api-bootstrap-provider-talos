@@ -41,21 +41,21 @@ func (r *TalosConfigReconciler) fetchInputSecret(ctx context.Context, config *bo
 	return inputSecret, nil
 }
 
-func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string, input *generate.Input) error {
+func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string, input *generate.Input) (*corev1.Secret, error) {
 
 	certMarshal, err := yaml.Marshal(input.Certs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	kubeTokenMarshal, err := yaml.Marshal(input.KubeadmTokens)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	trustdInfoMarshal, err := yaml.Marshal(input.TrustdInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	certSecret := &corev1.Secret{
@@ -72,7 +72,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bo
 
 	err = r.Client.Create(ctx, certSecret)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return certSecret, nil
 }
