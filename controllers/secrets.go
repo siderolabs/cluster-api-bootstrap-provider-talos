@@ -48,7 +48,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bo
 		return nil, err
 	}
 
-	kubeTokenMarshal, err := yaml.Marshal(input.KubeadmTokens)
+	kubeSecretsMarshal, err := yaml.Marshal(input.Secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bo
 			Name:      clusterName,
 		},
 		Data: map[string][]byte{
-			"certs":      certMarshal,
-			"kubeTokens": kubeTokenMarshal,
-			"trustdInfo": trustdInfoMarshal,
+			"certs":       certMarshal,
+			"kubeSecrets": kubeSecretsMarshal,
+			"trustdInfo":  trustdInfoMarshal,
 		},
 	}
 
