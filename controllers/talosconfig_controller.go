@@ -157,7 +157,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	certs := &generate.Certs{}
-	kubeTokens := &generate.KubeadmTokens{}
+	kubeSecrets := &generate.Secrets{}
 	trustdInfo := &generate.TrustdInfo{}
 
 	err = yaml.Unmarshal(inputSecret.Data["certs"], certs)
@@ -165,7 +165,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	err = yaml.Unmarshal(inputSecret.Data["kubeTokens"], kubeTokens)
+	err = yaml.Unmarshal(inputSecret.Data["kubeSecrets"], kubeSecrets)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -176,7 +176,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	input.Certs = certs
-	input.KubeadmTokens = kubeTokens
+	input.Secrets = kubeSecrets
 	input.TrustdInfo = trustdInfo
 
 	talosConfig := &talosConfig{
