@@ -1,59 +1,68 @@
 ---
+kind: secret
+name: kubeconfig
+
+get:
+  path: buildx
+  name: kubeconfig
+
+---
 kind: pipeline
 name: default
-
-workspace:
-  base: /go
-  path: src/github.com/talos-systems/cluster-api-bootstrap-provider-talos
 
 services:
   - name: docker
     image: docker:19.03-dind
     entrypoint:
-    - dockerd
+      - dockerd
     command:
-    - --dns=8.8.8.8
-    - --dns=8.8.4.4
-    - --mtu=1440
-    - --log-level=error
+      - --dns=8.8.8.8
+      - --dns=8.8.4.4
+      - --log-level=error
     privileged: true
     volumes:
-    - name: dockersock
-      path: /var/run
-    - name: manifests
-      path: /tmp/manifests
+      - name: docker-socket
+        path: /var/run
 
 steps:
-  - name: fetch
-    image: docker:git
-    commands:
-      - git fetch --tags
-    when:
-      event: tag
-
-  - name: test
+  - name: setup-ci
     image: autonomy/build-container:latest
     commands:
-      - sleep 5
-      - make test
+      - git fetch --tags
+      - apk add coreutils
+      - echo -e "$BUILDX_KUBECONFIG" > /root/.kube/config
+      - docker buildx create --driver kubernetes --driver-opt replicas=2 --driver-opt namespace=ci --driver-opt image=moby/buildkit:v0.6.2 --name ci --buildkitd-flags="--allow-insecure-entitlement security.insecure" --use
+      - docker buildx inspect --bootstrap
+    environment:
+      BUILDX_KUBECONFIG:
+        from_secret: kubeconfig
+    privileged: true
     volumes:
-      - name: dockersock
+      - name: docker-socket
         path: /var/run
-    depends_on:
-      - fetch
+      - name: docker
+        path: /root/.docker/buildx
+      - name: kube
+        path: /root/.kube
 
-  - name: build
+  - name: build-pull-request
     image: autonomy/build-container:latest
     pull: always
     commands:
-      - make docker-build
+      - make
+    when:
+      event:
+        include:
+          - pull_request
     volumes:
-      - name: dockersock
+      - name: docker-socket
         path: /var/run
-    depends_on:
-      - test
+      - name: docker
+        path: /root/.docker/buildx
+      - name: kube
+        path: /root/.kube
 
-  - name: push
+  - name: build-and-publish
     image: autonomy/build-container:latest
     pull: always
     environment:
@@ -62,39 +71,81 @@ steps:
       DOCKER_PASSWORD:
         from_secret: docker_password
     commands:
-      - make login
-      - make docker-push
-    volumes:
-      - name: dockersock
-        path: /var/run
+      - docker login --username "$${DOCKER_USERNAME}" --password "$${DOCKER_PASSWORD}"
+      - make PUSH=true
     when:
       event:
         exclude:
           - pull_request
-    depends_on:
-      - build
+    volumes:
+      - name: docker-socket
+        path: /var/run
+      - name: docker
+        path: /root/.docker/buildx
+      - name: kube
+        path: /root/.kube
+
+  - name: build-release
+    image: autonomy/build-container:latest
+    pull: always
+    commands:
+      - make release
+    when:
+      event:
+        - tag
+    volumes:
+      - name: docker-socket
+        path: /var/run
+      - name: docker
+        path: /root/.docker/buildx
+      - name: kube
+        path: /root/.kube
 
   - name: release
     image: plugins/github-release
     settings:
       api_key:
         from_secret: github_token
-      draft: true
-      files:
-        - /tmp/manifests/*
       checksum:
         - sha256
         - sha512
-    volumes:
-      - name: manifests
-        path: /tmp/manifests
-    depends_on:
-      - push
+      draft: true
+      files:
+        - _out/*
     when:
-      event: tag
+      event:
+        - tag
 
 volumes:
-  - name: dockersock
+  - name: docker-socket
     temp: {}
-  - name: manifests
+  - name: docker
     temp: {}
+  - name: kube
+    temp: {}
+---
+kind: pipeline
+name: notify
+
+clone:
+  disable: true
+
+steps:
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: slack_webhook
+      channel: proj-talos-maintainers
+    when:
+      status:
+        - success
+        - failure
+
+trigger:
+  status:
+    - success
+    - failure
+
+depends_on:
+  - default

@@ -24,14 +24,18 @@ import (
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
+	configmachine "github.com/talos-systems/talos/pkg/config/machine"
+	"github.com/talos-systems/talos/pkg/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
 const (
@@ -41,7 +45,8 @@ const (
 // TalosConfigReconciler reconciles a TalosConfig object
 type TalosConfigReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 type talosConfig struct {
@@ -57,9 +62,10 @@ type talosConfigContext struct {
 }
 
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch\
+// +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;machines;machines/status,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=secrets;events;configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+
 func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr error) {
 	ctx := context.Background()
 	log := r.Log.WithName(controllerName).
@@ -76,12 +82,6 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	// bail super early if it's already ready
-	if config.Status.Ready {
-		log.Info("ignoring an already ready config")
-		return ctrl.Result{}, nil
-	}
-
 	// Look up the Machine that owns this talosconfig if there is one
 	machine, err := util.GetOwnerMachine(ctx, r.Client, config.ObjectMeta)
 	if err != nil {
@@ -90,27 +90,15 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 	if machine == nil {
 		log.Info("Waiting for Machine Controller to set OwnerRef on the talosconfig")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, errors.New("no owner ref")
 	}
 	log = log.WithName(fmt.Sprintf("machine-name=%s", machine.Name))
-
-	// Ignore machines that already have bootstrap data
-	if machine.Spec.Bootstrap.Data != nil {
-		// TODO: mark the config as ready?
-		return ctrl.Result{}, nil
-	}
 
 	// Lookup the cluster the machine is associated with
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
 		log.Error(err, "could not get cluster by machine metadata")
 		return ctrl.Result{}, err
-	}
-
-	// Wait patiently for the infrastructure to be ready
-	if !cluster.Status.InfrastructureReady {
-		log.Info("Infrastructure is not ready, waiting until ready.")
-		return ctrl.Result{}, errors.New("infra not ready")
 	}
 
 	// Initialize the patch helper
@@ -128,13 +116,35 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		}
 	}()
 
+	// If the talosConfig doesn't have our finalizer, add it.
+	if !util.Contains(config.Finalizers, bootstrapv1alpha2.ConfigFinalizer) {
+		config.Finalizers = append(config.Finalizers, bootstrapv1alpha2.ConfigFinalizer)
+	}
+
+	// Handle deleted machines
+	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, config, cluster.ObjectMeta.Name)
+	}
+
+	// bail super early if it's already ready
+	if config.Status.Ready {
+		log.Info("ignoring an already ready config")
+		return ctrl.Result{}, nil
+	}
+
+	// Wait patiently for the infrastructure to be ready
+	if !cluster.Status.InfrastructureReady {
+		log.Info("Infrastructure is not ready, waiting until ready.")
+		return ctrl.Result{}, errors.New("infra not ready")
+	}
+
 	// Determine what type of node this is
-	machineType := generate.TypeJoin
+	machineType := configmachine.TypeWorker
 	switch config.Spec.MachineType {
 	case "init":
-		machineType = generate.TypeInit
+		machineType = configmachine.TypeInit
 	case "controlplane":
-		machineType = generate.TypeControlPlane
+		machineType = configmachine.TypeControlPlane
 	}
 
 	APIEndpointPort := strconv.Itoa(cluster.Status.APIEndpoints[0].Port)
@@ -147,7 +157,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	inputSecret, err := r.fetchInputSecret(ctx, config, cluster.ObjectMeta.Name)
-	if machineType == generate.TypeInit && k8serrors.IsNotFound(err) {
+	if machineType == configmachine.TypeInit && k8serrors.IsNotFound(err) {
 		inputSecret, err = r.writeInputSecret(ctx, config, cluster.ObjectMeta.Name, input)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -179,6 +189,18 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	input.Secrets = kubeSecrets
 	input.TrustdInfo = trustdInfo
 
+	input.InstallImage = config.Spec.InstallImage
+	input.InstallDisk = config.Spec.InstallDisk
+
+	nicList := []configmachine.Device{}
+	for _, nic := range config.Spec.NetworkInterfaces {
+		temp := configmachine.Device{}
+		temp.Interface = nic.Interface
+		temp.Ignore = nic.Ignore
+		nicList = append(nicList, temp)
+	}
+	input.NetworkConfig.NetworkInterfaces = nicList
+
 	talosConfig := &talosConfig{
 		Context: input.ClusterName,
 		Contexts: map[string]*talosConfigContext{
@@ -201,15 +223,48 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	config.Status.BootstrapData = []byte(data)
+	if len(config.Spec.CNIUrls) > 0 {
+		cniOverride := &v1alpha1.CNIConfig{
+			CNIName: "custom",
+			CNIUrls: config.Spec.CNIUrls,
+		}
+		data.ClusterConfig.ClusterNetwork.CNI = cniOverride
+	}
+
+	// TODO: check that these are required in capi cluster types
+	data.ClusterConfig.ClusterNetwork.PodSubnet = cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
+	data.ClusterConfig.ClusterNetwork.ServiceSubnet = cluster.Spec.ClusterNetwork.Services.CIDRBlocks
+
+	dataOut, err := data.String()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	config.Status.BootstrapData = []byte(dataOut)
 	config.Status.TalosConfig = string(talosConfigBytes)
 	config.Status.Ready = true
 
 	return ctrl.Result{}, nil
 }
 
-func (r *TalosConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string) (ctrl.Result, error) {
+
+	if config.Spec.MachineType == "init" {
+		err := r.deleteInputSecret(ctx, config, clusterName)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Config is deleted so remove the finalizer.
+	config.Finalizers = util.Filter(config.Finalizers, bootstrapv1alpha2.ConfigFinalizer)
+
+	return ctrl.Result{}, nil
+
+}
+func (r *TalosConfigReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&bootstrapv1alpha2.TalosConfig{}).
 		Complete(r)
 }

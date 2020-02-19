@@ -76,3 +76,14 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, config *bo
 	}
 	return certSecret, nil
 }
+
+func (r *TalosConfigReconciler) deleteInputSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string) error {
+	return r.Client.Delete(ctx,
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: config.GetNamespace(),
+				Name:      clusterName,
+			},
+		},
+	)
+}
