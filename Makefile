@@ -68,8 +68,6 @@ generate: ## Generate source code.
 .PHONY: container
 container: generate ## Build the container image.
 	@$(MAKE) docker-$@ TARGET_ARGS="--push=$(PUSH)"
-	sed -i'' -e 's@image: .*@image: '"$(REGISTRY_AND_USERNAME)/$(NAME):$(TAG)"'@' ./config/default/manager_image_patch.yaml
-
 
 .PHONY: manifests
 manifests: ## Generate manifests (e.g. CRD, RBAC, etc.).
