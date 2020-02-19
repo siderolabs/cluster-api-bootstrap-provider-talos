@@ -19,12 +19,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// ConfigFinalizer allows us to clean up resources before deletion
+	ConfigFinalizer = "talosconfig.bootstrap.cluster.x-k8s.io"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TalosConfigSpec defines the desired state of TalosConfig
 type TalosConfigSpec struct {
-	MachineType string `json:"machineType,omitempty"`
+	MachineType       string   `json:"machineType,omitempty"`
+	NetworkInterfaces []Device `json:"networkInterfaces,omitempty"`
+	InstallImage      string   `json:"installImage,omitempty"`
+	InstallDisk       string   `json:"installDisk,omitempty"`
+	CNIUrls           []string `json:"cniUrls,omitempty"`
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
@@ -75,4 +84,13 @@ type TalosConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&TalosConfig{}, &TalosConfigList{})
+}
+
+// TODO(rsmitty): this is disgusting, we should figure out how to do deepcopy
+// and use the already existing talos pkg
+
+// Device represents a network interface.
+type Device struct {
+	Interface string `json:"interface"`
+	Ignore    bool   `json:"ignore"`
 }

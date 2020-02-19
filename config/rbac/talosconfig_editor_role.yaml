@@ -1,23 +1,9 @@
-
----
+# permissions to do edit talosconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: talosconfig-editor-role
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - bootstrap.cluster.x-k8s.io
   resources:
@@ -38,14 +24,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - clusters
-  - clusters/status
-  - machines
-  - machines/status
-  verbs:
-  - get
-  - list
-  - watch

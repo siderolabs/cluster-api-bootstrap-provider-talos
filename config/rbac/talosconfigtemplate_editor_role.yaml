@@ -1,0 +1,26 @@
+# permissions to do edit talosconfigtemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: talosconfigtemplate-editor-role
+rules:
+- apiGroups:
+  - bootstrap.cluster.x-k8s.io
+  resources:
+  - talosconfigtemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bootstrap.cluster.x-k8s.io
+  resources:
+  - talosconfigtemplates/status
+  verbs:
+  - get
+  - patch
+  - update

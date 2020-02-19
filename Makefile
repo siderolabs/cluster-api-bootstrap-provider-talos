@@ -1,70 +1,105 @@
+REGISTRY ?= docker.io
+USERNAME ?= autonomy
+SHA ?= $(shell git describe --match=none --always --abbrev=8 --dirty)
 TAG ?= $(shell git describe --tag --always --dirty)
-REPO ?= autonomy/cluster-api-talos-controller
+BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+REGISTRY_AND_USERNAME := $(REGISTRY)/$(USERNAME)
+NAME := cluster-api-talos-controller
+
+ARTIFACTS := _out
+
+BUILD := docker buildx build
+PLATFORM ?= linux/amd64
+PROGRESS ?= auto
+PUSH ?= false
+COMMON_ARGS := --file=Dockerfile
+COMMON_ARGS += --progress=$(PROGRESS)
+COMMON_ARGS += --platform=$(PLATFORM)
+COMMON_ARGS += --build-arg=REGISTRY_AND_USERNAME=$(REGISTRY_AND_USERNAME)
+COMMON_ARGS += --build-arg=NAME=$(NAME)
+COMMON_ARGS += --build-arg=TAG=$(TAG)
+
+all: manifests container
+
+.PHONY: help
+help: ## This help menu.
+	@grep -E '^[a-zA-Z%_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+target-%: ## Builds the specified target defined in the Dockerfile. The build result will remain only in the build cache.
+	@$(BUILD) \
+		--target=$* \
+		$(COMMON_ARGS) \
+		$(TARGET_ARGS) .
+
+local-%: ## Builds the specified target defined in the Dockerfile using the local output type. The build result will be output to the specified local destination.
+	@$(MAKE) target-$* TARGET_ARGS="--output=type=local,dest=$(DEST) $(TARGET_ARGS)"
+
+docker-%: ## Builds the specified target defined in the Dockerfile using the docker output type. The build result will be loaded into docker.
+	@$(MAKE) target-$* TARGET_ARGS="--tag $(REGISTRY_AND_USERNAME)/$(NAME):$(TAG) $(TARGET_ARGS)"
+
+define RELEASEYAML
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: $(NAMESPACE)
+commonLabels:
+  app: cluster-api-talos-controller
+bases:
+  - crd
+  - rbac
+  - manager
+endef
+
+export RELEASEYAML
+.PHONY: init
+init: ## Initialize the project.
+	@mkdir tmp \
+	&& cd tmp \
+	&& kubebuilder init --repo $(REGISTRY_AND_USERNAME)/$(NAME) --domain $(DOMAIN) \
+	&& rm -rf Dockerfile Makefile .gitignore bin hack \
+	&& mv ./* ../ \
+	&& cd .. \
+	&& rm -rf tmp \
+	&& echo "$$RELEASEYAML" > ./config/kustomization.yaml
+
+.PHONY: generate
+generate: ## Generate source code.
+	@$(MAKE) local-$@ DEST=./
+
+.PHONY: container
+container: generate ## Build the container image.
+	@$(MAKE) docker-$@ TARGET_ARGS="--push=$(PUSH)"
+	sed -i'' -e 's@image: .*@image: '"$(REGISTRY_AND_USERNAME)/$(NAME):$(TAG)"'@' ./config/default/manager_image_patch.yaml
 
 
-# Image URL to use all building/pushing image targets
-IMG ?= $(REPO):$(TAG)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+.PHONY: manifests
+manifests: ## Generate manifests (e.g. CRD, RBAC, etc.).
+	@$(MAKE) local-$@ DEST=./
 
-all: test docker-build
+.PHONY: release
+release: manifests container ## Create the release YAML. The build result will be ouput to the specified local destination.
+	@$(MAKE) local-$@ DEST=./$(ARTIFACTS)
 
-# Run tests
-test: 
-	docker build . --target $@ -t $(REPO):test
+.PHONY: deploy
+deploy: manifests ## Deploy to a cluster. This is for testing purposes only.
+	kubectl apply -k config/default
 
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager main.go
+.PHONY: destroy
+destroy: ## Remove from a cluster. This is for testing purposes only.
+	kubectl delete -k config/default
 
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
-	go run ./main.go
+.PHONY: install
+install: manifests ## Install CRDs into a cluster.
+	kubectl apply -k config/crd
 
-# Install CRDs into a cluster
-install: manifests
-	kustomize build config/crd | kubectl apply -f -
+.PHONY: uninstall
+uninstall: manifests ## Uninstall CRDs from a cluster.
+	kubectl delete -k config/crd
 
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
-	cd config/manager && kustomize edit set image controller=${IMG}
-	kustomize build config/default | kubectl apply -f -
+.PHONY: run
+run: install ## Run the controller locally. This is for testing purposes only.
+	@$(MAKE) docker-container TARGET_ARGS="--load"
+	@docker run --rm -it --net host -v $(PWD):/src -v $(KUBECONFIG):/root/.kube/config -e KUBECONFIG=/root/.kube/config $(REGISTRY_AND_USERNAME)/$(NAME):$(TAG)
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-# Run go fmt against code
-fmt:
-	go fmt ./...
-
-# Run go vet against code
-vet:
-	go vet ./...
-
-# Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
-
-# Build the docker image
-docker-build:
-	@docker build . -t $(REPO):$(TAG)
-
-# Push the docker image
-docker-push:
-	@docker tag $(REPO):$(TAG) $(REPO):latest
-	@docker push $(REPO):$(TAG)
-	@docker push $(REPO):latest
-
-login:
-	@docker login --username "$(DOCKER_USERNAME)" --password "$(DOCKER_PASSWORD)"
-
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.4
-CONTROLLER_GEN=$(GOPATH)/bin/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+.PHONY: clean
+clean:
+	@rm -rf $(ARTIFACTS)
