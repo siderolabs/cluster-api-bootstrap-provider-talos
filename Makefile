@@ -42,7 +42,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: $(NAMESPACE)
 commonLabels:
-  app: cluster-api-talos-controller
+  app: $(NAME)
 bases:
   - crd
   - rbac
