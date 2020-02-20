@@ -65,6 +65,7 @@ func main() {
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
+		LeaderElectionID:   "controller-leader-election-cabpt",
 		Port:               9443,
 		EventBroadcaster:   broadcaster,
 	})
