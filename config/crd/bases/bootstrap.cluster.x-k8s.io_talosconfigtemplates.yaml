@@ -43,29 +43,12 @@ spec:
                 spec:
                   description: TalosConfigSpec defines the desired state of TalosConfig
                   properties:
-                    cniUrls:
-                      items:
-                        type: string
-                      type: array
-                    installDisk:
+                    data:
                       type: string
-                    installImage:
+                    generateType:
                       type: string
-                    machineType:
-                      type: string
-                    networkInterfaces:
-                      items:
-                        description: Device represents a network interface.
-                        properties:
-                          ignore:
-                            type: boolean
-                          interface:
-                            type: string
-                        required:
-                        - ignore
-                        - interface
-                        type: object
-                      type: array
+                  required:
+                  - generateType
                   type: object
               type: object
           required:
