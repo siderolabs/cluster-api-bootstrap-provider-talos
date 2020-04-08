@@ -73,6 +73,13 @@ type talosConfigContext struct {
 	Key    string
 }
 
+func (r *TalosConfigReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
+		For(&bootstrapv1alpha2.TalosConfig{}).
+		Complete(r)
+}
+
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;machines;machines/status,verbs=get;list;watch
@@ -135,7 +142,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 
 	// Handle deleted machines
 	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, config, cluster.ObjectMeta.Name)
+		return r.reconcileDelete(ctx, config)
 	}
 
 	// bail super early if it's already ready
@@ -187,27 +194,12 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	return ctrl.Result{}, nil
 }
 
-func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, clusterName string) (ctrl.Result, error) {
-
-	if config.Spec.GenerateType == "init" {
-		err := r.deleteInputSecret(ctx, config, clusterName)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
+func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *bootstrapv1alpha2.TalosConfig) (ctrl.Result, error) {
 	// Config is deleted so remove the finalizer.
 	config.Finalizers = util.Filter(config.Finalizers, bootstrapv1alpha2.ConfigFinalizer)
 
 	return ctrl.Result{}, nil
 
-}
-
-func (r *TalosConfigReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(options).
-		For(&bootstrapv1alpha2.TalosConfig{}).
-		Complete(r)
 }
 
 func genTalosConfigFile(clusterName string, certs *generate.Certs) (string, error) {
@@ -241,6 +233,14 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 		return retBundle, err
 	}
 
+	// Create the secret with kubernetes certs so a kubeconfig can be generated
+	if userConfig.Machine().Type() == configmachine.TypeInit {
+		err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA())
+		if err != nil {
+			return retBundle, err
+		}
+	}
+
 	userConfigStr, err := userConfig.String()
 	if err != nil {
 		return retBundle, err
@@ -265,7 +265,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	}
 
 	APIEndpointPort := strconv.Itoa(scope.Cluster.Status.APIEndpoints[0].Port)
-	input, err := generate.NewInput(scope.Cluster.ObjectMeta.Name,
+	input, err := generate.NewInput(scope.Cluster.Name,
 		"https://"+scope.Cluster.Status.APIEndpoints[0].Host+":"+APIEndpointPort,
 		*scope.Machine.Spec.Version,
 	)
@@ -273,9 +273,21 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, err
 	}
 
-	inputSecret, err := r.fetchInputSecret(ctx, scope.Config, scope.Cluster.ObjectMeta.Name)
+	// Stash our generated input secrets so that we can reuse them for other nodes
+	inputSecret, err := r.fetchSecret(ctx, scope.Config, scope.Cluster.Name+"-talos")
 	if machineType == configmachine.TypeInit && k8serrors.IsNotFound(err) {
-		inputSecret, err = r.writeInputSecret(ctx, scope.Config, scope.Cluster.ObjectMeta.Name, input)
+		inputSecret, err = r.writeInputSecret(ctx, scope, input)
+		if err != nil {
+			return retBundle, err
+		}
+	} else if err != nil {
+		return retBundle, err
+	}
+
+	// Create the secret with kubernetes certs so a kubeconfig can be generated
+	_, err = r.fetchSecret(ctx, scope.Config, scope.Cluster.Name+"-ca")
+	if machineType == configmachine.TypeInit && k8serrors.IsNotFound(err) {
+		err = r.writeK8sCASecret(ctx, scope, input.Certs.K8s)
 		if err != nil {
 			return retBundle, err
 		}
