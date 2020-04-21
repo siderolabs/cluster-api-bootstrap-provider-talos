@@ -15,9 +15,9 @@ There are a few corequisites and assumptions that go into using this project:
 ## Building and Installing
 
 This project can be built simply by running `make release` from the root directory.
-Doing so will create a file called `_out/release.yaml`.
+Doing so will create a file called `_out/bootstrap-components.yaml`.
 If you wish, you can tweak settings by editing the release yaml.
-This file can then be installed into your management cluster with `kubectl apply -f _out/release.yaml`.
+This file can then be installed into your management cluster with `kubectl apply -f _out/bootstrap-components.yaml`.
 
 Note that CABPT should be deployed as part of a set of controllers for Cluster API.
 You will need at least the upstream CAPI components and an infrastructure provider for v1alpha2 CAPI capabilities.
