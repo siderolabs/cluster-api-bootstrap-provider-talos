@@ -19,17 +19,19 @@ import (
 	"context"
 
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
+	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
 	"github.com/talos-systems/talos/pkg/crypto/x509"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha2"
+	"k8s.io/utils/pointer"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, secretName string) (*corev1.Secret, error) {
+func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstrapv1alpha3.TalosConfig, secretName string) (*corev1.Secret, error) {
 	retSecret := &corev1.Secret{}
 	err := r.Client.Get(context.Background(), client.ObjectKey{
 		Namespace: config.GetNamespace(),
@@ -65,7 +67,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 			Namespace: scope.Config.Namespace,
 			Name:      scope.Cluster.Name + "-talos",
 			Labels: map[string]string{
-				clusterv1.MachineClusterLabelName: scope.Cluster.Name,
+				clusterv1.ClusterLabelName: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				metav1.OwnerReference{
@@ -99,7 +101,7 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 				Namespace: scope.Config.Namespace,
 				Name:      scope.Cluster.Name + "-ca",
 				Labels: map[string]string{
-					clusterv1.MachineClusterLabelName: scope.Cluster.Name,
+					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					metav1.OwnerReference{
@@ -113,6 +115,44 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 			Data: map[string][]byte{
 				"tls.crt": certs.Crt,
 				"tls.key": certs.Key,
+			},
+		}
+
+		err = r.Client.Create(ctx, certSecret)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// writeBootstrapData creates a new secret with the data passed in as input
+func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *TalosConfigScope, data []byte) error {
+	// Create ca secret only if it doesn't already exist
+	_, err := r.fetchSecret(ctx, scope.Config, scope.Machine.Name+"-bootstrap-data")
+	if k8serrors.IsNotFound(err) {
+		certSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: scope.Config.Namespace,
+				Name:      scope.Machine.Name + "-bootstrap-data",
+				Labels: map[string]string{
+					clusterv1.ClusterLabelName: scope.Cluster.Name,
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: bootstrapv1alpha3.GroupVersion.String(),
+						Kind:       "TalosConfig",
+						Name:       scope.Config.Name,
+						UID:        scope.Config.UID,
+						Controller: pointer.BoolPtr(true),
+					},
+				},
+			},
+			Data: map[string][]byte{
+				"value": data,
 			},
 		}
 

@@ -5,7 +5,8 @@ ENV GO111MODULE on
 ENV GOPROXY https://proxy.golang.org
 ENV CGO_ENABLED 0
 WORKDIR /tmp
-RUN go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.5
+RUN go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.8
+RUN go get k8s.io/code-generator/cmd/conversion-gen@v0.18.2
 WORKDIR /src
 COPY ./go.mod ./
 COPY ./go.sum ./
@@ -17,13 +18,14 @@ RUN ! go mod tidy -v 2>&1 | grep .
 
 FROM build AS manifests-build
 ARG NAME
-RUN controller-gen rbac:roleName=manager-role crd paths="./..." output:rbac:artifacts:config=config/rbac output:crd:artifacts:config=config/crd/bases
+RUN controller-gen crd:crdVersions=v1 paths="./api/..." output:crd:dir=config/crd/bases output:webhook:dir=config/webhook webhook
+RUN controller-gen rbac:roleName=manager-role paths="./controllers/..." output:rbac:dir=config/rbac
 FROM scratch AS manifests
-COPY --from=manifests-build /src/config/crd /config/crd
-COPY --from=manifests-build /src/config/rbac /config/rbac
+COPY --from=manifests-build /src/config /config
 
 FROM build AS generate-build
 RUN controller-gen object:headerFile=./hack/boilerplate.go.txt paths="./..."
+RUN	conversion-gen --input-dirs=./api/v1alpha2 --output-base ./ --output-file-base=zz_generated.conversion --go-header-file=./hack/boilerplate.go.txt
 FROM scratch AS generate
 COPY --from=generate-build /src/api /api
 
@@ -40,7 +42,7 @@ ARG TAG
 RUN cd config/manager \
   && kustomize edit set image controller=${REGISTRY_AND_USERNAME}/${NAME}:${TAG} \
   && cd - \
-  && kubectl kustomize config/default >/bootstrap-components.yaml \
+  && kustomize build config > /bootstrap-components.yaml \
   && cp config/metadata/metadata.yaml /metadata.yaml
 FROM scratch AS release
 COPY --from=release-build /bootstrap-components.yaml /bootstrap-components.yaml

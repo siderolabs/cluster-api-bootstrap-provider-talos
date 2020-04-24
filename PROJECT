@@ -7,4 +7,10 @@ resources:
 - group: bootstrap
   kind: TalosConfigTemplate
   version: v1alpha2
+- group: bootstrap
+  kind: TalosConfig
+  version: v1alpha3
+- group: bootstrap
+  kind: TalosConfigTemplate
+  version: v1alpha3
 version: "2"
