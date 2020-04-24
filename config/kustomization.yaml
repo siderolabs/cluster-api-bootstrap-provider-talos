@@ -1,0 +1,23 @@
+namePrefix: cabpt-
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  cluster.x-k8s.io/provider: "bootstrap-talos"
+bases:
+  - crd
+  - webhook
+  - default
+
+patchesJson6902:
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: talosconfigs.bootstrap.cluster.x-k8s.io
+    path: patch_crd_webhook_namespace.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: talosconfigtemplates.bootstrap.cluster.x-k8s.io
+    path: patch_crd_webhook_namespace.yaml

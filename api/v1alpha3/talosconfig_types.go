@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1alpha3
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,9 +23,6 @@ const (
 	// ConfigFinalizer allows us to clean up resources before deletion
 	ConfigFinalizer = "talosconfig.bootstrap.cluster.x-k8s.io"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TalosConfigSpec defines the desired state of TalosConfig
 type TalosConfigSpec struct {
@@ -39,25 +36,26 @@ type TalosConfigStatus struct {
 	// Ready indicates the BootstrapData field is ready to be consumed
 	Ready bool `json:"ready,omitempty"`
 
-	// BootstrapData will be a slice of bootstrap data
+	// DataSecretName is the name of the secret that stores the bootstrap data script.
 	// +optional
-	BootstrapData []byte `json:"bootstrapData,omitempty"`
+	DataSecretName *string `json:"dataSecretName,omitempty"`
 
 	// Talos config will be a string containing the config for download
 	// +optional
 	TalosConfig string `json:"talosConfig,omitempty"`
 
-	// ErrorReason will be set on non-retryable errors
+	// FailureReason will be set on non-retryable errors
 	// +optional
-	ErrorReason string `json:"errorReason,omitempty"`
+	FailureReason string `json:"failureReason,omitempty"`
 
-	// ErrorMessage will be set on non-retryable errors
+	// FailureMessage will be set on non-retryable errors
 	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=talosconfigs,scope=Namespaced,categories=cluster-api
+// +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 
 // TalosConfig is the Schema for the talosconfigs API
@@ -80,13 +78,4 @@ type TalosConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&TalosConfig{}, &TalosConfigList{})
-}
-
-// TODO(rsmitty): this is disgusting, we should figure out how to do deepcopy
-// and use the already existing talos pkg
-
-// Device represents a network interface.
-type Device struct {
-	Interface string `json:"interface"`
-	Ignore    bool   `json:"ignore"`
 }

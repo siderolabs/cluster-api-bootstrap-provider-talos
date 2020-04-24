@@ -3,4 +3,4 @@ kind: Metadata
 releaseSeries:
 - major: 0
   minor: 1
-  contract: v1alpha2
+  contract: v1alpha3
