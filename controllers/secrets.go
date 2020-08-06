@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -70,12 +69,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 				clusterv1.ClusterLabelName: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
-					APIVersion: clusterv1.GroupVersion.String(),
-					Kind:       "Cluster",
-					Name:       scope.Cluster.Name,
-					UID:        scope.Cluster.UID,
-				},
+				*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
 			},
 		},
 		Data: map[string][]byte{
@@ -104,12 +98,7 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
-					metav1.OwnerReference{
-						APIVersion: clusterv1.GroupVersion.String(),
-						Kind:       "Cluster",
-						Name:       scope.Cluster.Name,
-						UID:        scope.Cluster.UID,
-					},
+					*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
 				},
 			},
 			Data: map[string][]byte{
@@ -142,13 +131,7 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: bootstrapv1alpha3.GroupVersion.String(),
-						Kind:       "TalosConfig",
-						Name:       scope.Config.Name,
-						UID:        scope.Config.UID,
-						Controller: pointer.BoolPtr(true),
-					},
+					*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
 				},
 			},
 			Data: map[string][]byte{
