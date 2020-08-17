@@ -8,7 +8,8 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
-	github.com/talos-systems/talos v0.4.0
+	github.com/talos-systems/crypto v0.2.0
+	github.com/talos-systems/talos/pkg/machinery v0.0.0-20200817172914-fca19cb8be2e
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2

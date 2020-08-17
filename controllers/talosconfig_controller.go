@@ -24,9 +24,9 @@ import (
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	configmachine "github.com/talos-systems/talos/pkg/config/machine"
-	"github.com/talos-systems/talos/pkg/config/types/v1alpha1"
-	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
+	configmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -265,7 +265,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	retBundle := &TalosConfigBundle{}
 
 	// Determine what type of node this is
-	machineType := configmachine.TypeWorker
+	machineType := configmachine.TypeJoin
 	switch scope.Config.Spec.GenerateType {
 	case "init":
 		machineType = configmachine.TypeInit
