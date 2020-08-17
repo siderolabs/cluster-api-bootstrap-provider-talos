@@ -20,8 +20,8 @@ import (
 
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/talos-systems/talos/pkg/config/types/v1alpha1/generate"
-	"github.com/talos-systems/talos/pkg/crypto/x509"
+	"github.com/talos-systems/crypto/x509"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
