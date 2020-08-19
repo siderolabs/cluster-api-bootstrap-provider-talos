@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
@@ -273,10 +274,14 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		machineType = configmachine.TypeControlPlane
 	}
 
+	// Handle k8s version being formatted like "vX.Y.Z" instead of without leading 'v'
+	// TrimPrefix returns the string unchanged if the prefix isn't present.
+	k8sVersion := strings.TrimPrefix(*scope.Machine.Spec.Version, "v")
+
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
 	input, err := generate.NewInput(scope.Cluster.Name,
 		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
-		*scope.Machine.Spec.Version,
+		k8sVersion,
 	)
 	if err != nil {
 		return retBundle, err
