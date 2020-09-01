@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/pkg/constants"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	configmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
@@ -274,9 +275,13 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		machineType = configmachine.TypeControlPlane
 	}
 
-	// Handle k8s version being formatted like "vX.Y.Z" instead of without leading 'v'
+	// Allow user to override default kube version.
+	// This also handles version being formatted like "vX.Y.Z" instead of without leading 'v'
 	// TrimPrefix returns the string unchanged if the prefix isn't present.
-	k8sVersion := strings.TrimPrefix(*scope.Machine.Spec.Version, "v")
+	k8sVersion := constants.DefaultKubeVersion
+	if scope.Machine.Spec.Version != nil {
+		k8sVersion = strings.TrimPrefix(*scope.Machine.Spec.Version, "v")
+	}
 
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
 	input, err := generate.NewInput(scope.Cluster.Name,
