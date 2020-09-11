@@ -1,10 +1,22 @@
 
+<a name="v0.2.0-alpha.3"></a>
+## [v0.2.0-alpha.3](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.2...v0.2.0-alpha.3) (2020-09-01)
+
+### Fix
+
+* ensure version is not nil
+
+
 <a name="v0.2.0-alpha.2"></a>
 ## [v0.2.0-alpha.2](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.1...v0.2.0-alpha.2) (2020-08-19)
 
 ### Fix
 
 * change k8s version if it has leading "v"
+
+### Release
+
+* **v0.2.0-alpha.2:** prepare release
 
 
 <a name="v0.2.0-alpha.1"></a>
