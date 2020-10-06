@@ -1,10 +1,21 @@
 
+<a name="v0.2.0-alpha.4"></a>
+## [v0.2.0-alpha.4](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.3...v0.2.0-alpha.4) (2020-10-06)
+
+### Fix
+
+* ensure we have a dns domain
+
 <a name="v0.2.0-alpha.3"></a>
 ## [v0.2.0-alpha.3](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.2...v0.2.0-alpha.3) (2020-09-01)
 
 ### Fix
 
 * ensure version is not nil
+
+### Release
+
+* **v0.2.0-alpha.3:** prepare release
 
 
 <a name="v0.2.0-alpha.2"></a>
