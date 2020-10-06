@@ -25,10 +25,10 @@ import (
 
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/pkg/constants"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	configmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/talos-systems/talos/pkg/machinery/constants"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -278,15 +278,24 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	// Allow user to override default kube version.
 	// This also handles version being formatted like "vX.Y.Z" instead of without leading 'v'
 	// TrimPrefix returns the string unchanged if the prefix isn't present.
-	k8sVersion := constants.DefaultKubeVersion
+	k8sVersion := constants.DefaultKubernetesVersion
 	if scope.Machine.Spec.Version != nil {
 		k8sVersion = strings.TrimPrefix(*scope.Machine.Spec.Version, "v")
 	}
 
+	clusterDNS := constants.DefaultDNSDomain
+	if scope.Cluster.Spec.ClusterNetwork.ServiceDomain != "" {
+		clusterDNS = scope.Cluster.Spec.ClusterNetwork.ServiceDomain
+	}
+
+	genOptions := []generate.GenOption{generate.WithDNSDomain(clusterDNS)}
+
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
-	input, err := generate.NewInput(scope.Cluster.Name,
+	input, err := generate.NewInput(
+		scope.Cluster.Name,
 		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
 		k8sVersion,
+		genOptions...,
 	)
 	if err != nil {
 		return retBundle, err
