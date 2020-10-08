@@ -69,7 +69,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 				clusterv1.ClusterLabelName: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
+				*metav1.NewControllerRef(scope.Cluster, bootstrapv1alpha3.GroupVersion.WithKind("Cluster")),
 			},
 		},
 		Data: map[string][]byte{
@@ -98,7 +98,7 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
+					*metav1.NewControllerRef(scope.Cluster, bootstrapv1alpha3.GroupVersion.WithKind("Cluster")),
 				},
 			},
 			Data: map[string][]byte{
