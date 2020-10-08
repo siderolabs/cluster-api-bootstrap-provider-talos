@@ -1,10 +1,23 @@
 
+
+<a name="v0.2.0-alpha.5"></a>
+## [v0.2.0-alpha.5](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.4...v0.2.0-alpha.5) (2020-10-08)
+
+### Fix
+
+* make sure secrets are cluster owned
+
 <a name="v0.2.0-alpha.4"></a>
 ## [v0.2.0-alpha.4](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.3...v0.2.0-alpha.4) (2020-10-06)
 
 ### Fix
 
 * ensure we have a dns domain
+
+### Release
+
+* **v0.2.0-alpha.4:** prepare release
+
 
 <a name="v0.2.0-alpha.3"></a>
 ## [v0.2.0-alpha.3](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.2...v0.2.0-alpha.3) (2020-09-01)
