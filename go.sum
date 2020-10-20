@@ -449,8 +449,8 @@ github.com/talos-systems/crypto v0.2.0 h1:UwT8uhJ0eDlklY0vYwo1+LGoFgiqkPqjQnae6j
 github.com/talos-systems/crypto v0.2.0/go.mod h1:KwqG+jANKU1FNQIapmioHQ5fkovY1DJkAqMenjYBGh0=
 github.com/talos-systems/net v0.2.0 h1:QJ2ofYboG1Zjew9b+3RAjtLIfL0mIONGuc6/LyO68MM=
 github.com/talos-systems/net v0.2.0/go.mod h1:VreSAyRmxMtqussAHSKMKkJQa1YwBTSVfkmE4Jydam4=
-github.com/talos-systems/talos/pkg/machinery v0.0.0-20201006184949-3961f835f502 h1:Y62JmL3Ms0gsiAL6/0ug2WEody1czNdZCQ2bnk63Dco=
-github.com/talos-systems/talos/pkg/machinery v0.0.0-20201006184949-3961f835f502/go.mod h1:Oa6kzDfA2SSosSITBXf6XMl/cvSfI330LiceB5wO/Dg=
+github.com/talos-systems/talos/pkg/machinery v0.0.0-20201020161939-d2583e228288 h1:YIDpZsiYrdmAvIm8gGq7eHpsgkXZxWUX/Uj3oo7Pzh8=
+github.com/talos-systems/talos/pkg/machinery v0.0.0-20201020161939-d2583e228288/go.mod h1:Oa6kzDfA2SSosSITBXf6XMl/cvSfI330LiceB5wO/Dg=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
