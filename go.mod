@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/talos-systems/crypto v0.2.0
-	github.com/talos-systems/talos/pkg/machinery v0.0.0-20201006184949-3961f835f502
+	github.com/talos-systems/talos/pkg/machinery v0.0.0-20201020161939-d2583e228288
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
