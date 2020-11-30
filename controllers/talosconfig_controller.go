@@ -18,13 +18,16 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/talos-systems/talos/pkg/machinery/config/configpatcher"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	configmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
@@ -61,8 +64,8 @@ type TalosConfigScope struct {
 }
 
 type TalosConfigBundle struct {
-	BoostrapData string
-	TalosConfig  string
+	BootstrapData string
+	TalosConfig   string
 }
 
 type talosConfig struct {
@@ -192,10 +195,31 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	// Packet acts a fool if you don't prepend #!talos to the userdata
 	// so we try to suss out if that's the type of machine getting created.
 	if machine.Spec.InfrastructureRef.Kind == "PacketMachine" {
-		retData.BoostrapData = "#!talos\n" + retData.BoostrapData
+		retData.BootstrapData = "#!talos\n" + retData.BootstrapData
 	}
 
-	err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BoostrapData))
+	// Handle patches to the machine config if they were specified
+	// Note this will patch both pre-generated and user-provided configs.
+	if len(config.Spec.ConfigPatches) > 0 {
+		marshalledPatches, err := json.Marshal(config.Spec.ConfigPatches)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failure marshalling config patches: %s", err)
+		}
+
+		patch, err := jsonpatch.DecodePatch(marshalledPatches)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failure decoding config patches from talosconfig to rfc6902 patch: %s", err)
+		}
+
+		patchedBytes, err := configpatcher.JSON6902([]byte(retData.BootstrapData), patch)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		retData.BootstrapData = string(patchedBytes)
+	}
+
+	err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -257,7 +281,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 		return retBundle, err
 	}
 
-	retBundle.BoostrapData = userConfigStr
+	retBundle.BootstrapData = userConfigStr
 
 	return retBundle, nil
 }
@@ -290,11 +314,17 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions := []generate.GenOption{generate.WithDNSDomain(clusterDNS)}
 
+	secretBundle, err := generate.NewSecretsBundle()
+	if err != nil {
+		return retBundle, err
+	}
+
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
 	input, err := generate.NewInput(
 		scope.Cluster.Name,
 		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
 		k8sVersion,
+		secretBundle,
 		genOptions...,
 	)
 	if err != nil {
@@ -370,7 +400,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, err
 	}
 
-	retBundle.BoostrapData = dataOut
+	retBundle.BootstrapData = dataOut
 
 	return retBundle, nil
 }

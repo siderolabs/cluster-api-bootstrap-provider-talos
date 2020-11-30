@@ -26,8 +26,9 @@ const (
 
 // TalosConfigSpec defines the desired state of TalosConfig
 type TalosConfigSpec struct {
-	GenerateType string `json:"generateType"` //none,init,controlplane,worker mutually exclusive w/ data
-	Data         string `json:"data,omitempty"`
+	GenerateType  string          `json:"generateType"` //none,init,controlplane,worker mutually exclusive w/ data
+	Data          string          `json:"data,omitempty"`
+	ConfigPatches []ConfigPatches `json:"configPatches,omitempty"`
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
