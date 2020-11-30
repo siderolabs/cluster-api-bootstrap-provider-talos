@@ -197,6 +197,7 @@ func autoConvert_v1alpha2_TalosConfigSpec_To_v1alpha3_TalosConfigSpec(in *TalosC
 func autoConvert_v1alpha3_TalosConfigSpec_To_v1alpha2_TalosConfigSpec(in *v1alpha3.TalosConfigSpec, out *TalosConfigSpec, s conversion.Scope) error {
 	out.GenerateType = in.GenerateType
 	out.Data = in.Data
+	// WARNING: in.ConfigPatches requires manual conversion: does not exist in peer-type
 	return nil
 }
 
