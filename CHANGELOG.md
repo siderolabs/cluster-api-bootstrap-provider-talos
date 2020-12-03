@@ -1,4 +1,16 @@
 
+<a name="v0.2.0-alpha.8"></a>
+## [v0.2.0-alpha.8](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.7...v0.2.0-alpha.8) (2020-11-30)
+
+### Feat
+
+* support config patches at the bootstrap provider level
+
+### Release
+
+* **v0.2.0-alpha.7:** prepare release
+
+
 <a name="v0.2.0-alpha.7"></a>
 ## [v0.2.0-alpha.7](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.6...v0.2.0-alpha.7) (2020-11-13)
 
@@ -43,7 +55,7 @@
 
 
 <a name="v0.2.0-alpha.3"></a>
-## [v0.2.0-alpha.3](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.1...v0.2.0-alpha.3) (2020-09-11)
+## [v0.2.0-alpha.3](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.2...v0.2.0-alpha.3) (2020-09-11)
 
 ### Fix
 
@@ -57,6 +69,25 @@
 * **v0.2.0-alpha.3:** prepare release
 
 
+<a name="v0.2.0-alpha.2"></a>
+## [v0.2.0-alpha.2](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.1...v0.2.0-alpha.2) (2020-08-17)
+
+
 <a name="v0.2.0-alpha.1"></a>
-## [v0.2.0-alpha.1](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.2...v0.2.0-alpha.1) (2020-08-17)
+## [v0.2.0-alpha.1](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.0...v0.2.0-alpha.1) (2020-08-17)
+
+### Chore
+
+* update to new talos modules
+* update drone pipeline type
+* update talos pkg import
+
+### Fix
+
+* ensure proper ownership of certs
+* ensure machine configs work in packet
+
+### Release
+
+* **v0.2.0-alpha.2:** prepare release
 
