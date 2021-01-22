@@ -192,12 +192,6 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, errors.New("unknown generate type specified")
 	}
 
-	// Packet acts a fool if you don't prepend #!talos to the userdata
-	// so we try to suss out if that's the type of machine getting created.
-	if machine.Spec.InfrastructureRef.Kind == "PacketMachine" {
-		retData.BootstrapData = "#!talos\n" + retData.BootstrapData
-	}
-
 	// Handle patches to the machine config if they were specified
 	// Note this will patch both pre-generated and user-provided configs.
 	if len(config.Spec.ConfigPatches) > 0 {
@@ -217,6 +211,12 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		}
 
 		retData.BootstrapData = string(patchedBytes)
+	}
+
+	// Packet acts a fool if you don't prepend #!talos to the userdata
+	// so we try to suss out if that's the type of machine getting created.
+	if machine.Spec.InfrastructureRef.Kind == "PacketMachine" {
+		retData.BootstrapData = "#!talos\n" + retData.BootstrapData
 	}
 
 	err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
