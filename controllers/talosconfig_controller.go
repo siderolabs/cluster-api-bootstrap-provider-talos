@@ -38,12 +38,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -58,9 +64,9 @@ type TalosConfigReconciler struct {
 }
 
 type TalosConfigScope struct {
-	Config  *bootstrapv1alpha3.TalosConfig
-	Machine *capiv1.Machine
-	Cluster *capiv1.Cluster
+	Config      *bootstrapv1alpha3.TalosConfig
+	ConfigOwner *bsutil.ConfigOwner
+	Cluster     *capiv1.Cluster
 }
 
 type TalosConfigBundle struct {
@@ -80,16 +86,51 @@ type talosConfigContext struct {
 	Key    string
 }
 
-func (r *TalosConfigReconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(options).
+func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	r.Scheme = mgr.GetScheme()
+
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&bootstrapv1alpha3.TalosConfig{}).
-		Complete(r)
+		WithOptions(options).
+		Watches(
+			&source.Kind{Type: &capiv1.Machine{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.MachineToBootstrapMapFunc),
+			},
+		)
+
+	if feature.Gates.Enabled(feature.MachinePool) {
+		b = b.Watches(
+			&source.Kind{Type: &expv1.MachinePool{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.MachinePoolToBootstrapMapFunc),
+			},
+		)
+	}
+
+	c, err := b.Build(r)
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &capiv1.Cluster{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(r.ClusterToTalosConfigs),
+		},
+		predicates.ClusterUnpausedAndInfrastructureReady(r.Log),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;machines;machines/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups=exp.cluster.x-k8s.io,resources=machinepools;machinepools/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr error) {
@@ -100,7 +141,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 
 	// Lookup the talosconfig config
 	config := &bootstrapv1alpha3.TalosConfig{}
-	if err := r.Get(ctx, req.NamespacedName, config); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, config); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -108,31 +149,31 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	// Look up the Machine that owns this talosconfig if there is one
-	machine, err := util.GetOwnerMachine(ctx, r.Client, config.ObjectMeta)
+	// Look up the resource that owns this talosconfig if there is one
+	owner, err := bsutil.GetConfigOwner(ctx, r.Client, config)
 	if err != nil {
-		log.Error(err, "could not get owner machine")
+		log.Error(err, "could not get owner resource")
 		return ctrl.Result{}, err
 	}
-	if machine == nil {
-		log.Info("Waiting for Machine Controller to set OwnerRef on the talosconfig")
+	if owner == nil {
+		log.Info("Waiting for OwnerRef on the talosconfig")
 		return ctrl.Result{}, errors.New("no owner ref")
 	}
-	log = log.WithName(fmt.Sprintf("machine-name=%s", machine.Name))
+	log = log.WithName(fmt.Sprintf("owner-name=%s", owner.GetName()))
 
 	// Lookup the cluster the machine is associated with
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	cluster, err := util.GetClusterByName(ctx, r.Client, owner.GetNamespace(), owner.ClusterName())
 	if err != nil {
 		log.Error(err, "could not get cluster by machine metadata")
 		return ctrl.Result{}, err
 	}
 
 	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(config, r)
+	patchHelper, err := patch.NewHelper(config, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	// Always attempt to Patch the KubeadmConfig object and status after each reconciliation.
+	// Always attempt to Patch the TalosConfig object and status after each reconciliation.
 	defer func() {
 		if err := patchHelper.Patch(ctx, config); err != nil {
 			log.Error(err, "failed to patch config")
@@ -163,9 +204,9 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	tcScope := &TalosConfigScope{
-		Config:  config,
-		Machine: machine,
-		Cluster: cluster,
+		Config:      config,
+		ConfigOwner: owner,
+		Cluster:     cluster,
 	}
 
 	var retData *TalosConfigBundle
@@ -214,9 +255,23 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	}
 
 	// Packet acts a fool if you don't prepend #!talos to the userdata
-	// so we try to suss out if that's the type of machine getting created.
-	if machine.Spec.InfrastructureRef.Kind == "PacketMachine" {
-		retData.BootstrapData = "#!talos\n" + retData.BootstrapData
+	// so we try to suss out if that's the type of machine/machinePool getting created.
+	if owner.IsMachinePool() {
+		mp := &expv1.MachinePool{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(owner.Object, mp); err != nil {
+			return ctrl.Result{}, err
+		}
+		if mp.Spec.Template.Spec.InfrastructureRef.Kind == "PacketMachinePool" {
+			retData.BootstrapData = "#!talos\n" + retData.BootstrapData
+		}
+	} else {
+		machine := &capiv1.Machine{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(owner.Object, machine); err != nil {
+			return ctrl.Result{}, err
+		}
+		if machine.Spec.InfrastructureRef.Name == "PacketMachine" {
+			retData.BootstrapData = "#!talos\n" + retData.BootstrapData
+		}
 	}
 
 	err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
@@ -224,7 +279,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	config.Status.DataSecretName = pointer.StringPtr(tcScope.Machine.Name + "-bootstrap-data")
+	config.Status.DataSecretName = pointer.StringPtr(tcScope.ConfigOwner.GetName() + "-bootstrap-data")
 	config.Status.TalosConfig = retData.TalosConfig
 	config.Status.Ready = true
 
@@ -303,8 +358,22 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	// This also handles version being formatted like "vX.Y.Z" instead of without leading 'v'
 	// TrimPrefix returns the string unchanged if the prefix isn't present.
 	k8sVersion := constants.DefaultKubernetesVersion
-	if scope.Machine.Spec.Version != nil {
-		k8sVersion = strings.TrimPrefix(*scope.Machine.Spec.Version, "v")
+	if scope.ConfigOwner.IsMachinePool() {
+		mp := &expv1.MachinePool{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, mp); err != nil {
+			return retBundle, err
+		}
+		if mp.Spec.Template.Spec.Version != nil {
+			k8sVersion = strings.TrimPrefix(*mp.Spec.Template.Spec.Version, "v")
+		}
+	} else {
+		machine := &capiv1.Machine{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, machine); err != nil {
+			return retBundle, err
+		}
+		if machine.Spec.Version != nil {
+			k8sVersion = strings.TrimPrefix(*machine.Spec.Version, "v")
+		}
 	}
 
 	clusterDNS := constants.DefaultDNSDomain
@@ -403,4 +472,85 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	retBundle.BootstrapData = dataOut
 
 	return retBundle, nil
+}
+
+// MachineToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
+// request for reconciliation of TalosConfig.
+func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o handler.MapObject) []ctrl.Request {
+	m, ok := o.Object.(*capiv1.Machine)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
+	}
+
+	result := []ctrl.Request{}
+	if m.Spec.Bootstrap.ConfigRef != nil && m.Spec.Bootstrap.ConfigRef.GroupVersionKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig") {
+		name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.Bootstrap.ConfigRef.Name}
+		result = append(result, ctrl.Request{NamespacedName: name})
+	}
+	return result
+}
+
+// MachinePoolToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
+// request for reconciliation of TalosConfig.
+func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o handler.MapObject) []ctrl.Request {
+	m, ok := o.Object.(*expv1.MachinePool)
+	if !ok {
+		panic(fmt.Sprintf("Expected a MachinePool but got a %T", o))
+	}
+
+	result := []ctrl.Request{}
+	configRef := m.Spec.Template.Spec.Bootstrap.ConfigRef
+	if configRef != nil && configRef.GroupVersionKind().GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+		name := client.ObjectKey{Namespace: m.Namespace, Name: configRef.Name}
+		result = append(result, ctrl.Request{NamespacedName: name})
+	}
+	return result
+}
+
+// ClusterToTalosConfigs is a handler.ToRequestsFunc to be used to enqeue
+// requests for reconciliation of TalosConfigs.
+func (r *TalosConfigReconciler) ClusterToTalosConfigs(o handler.MapObject) []ctrl.Request {
+	result := []ctrl.Request{}
+
+	c, ok := o.Object.(*capiv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	selectors := []client.ListOption{
+		client.InNamespace(c.Namespace),
+		client.MatchingLabels{
+			capiv1.ClusterLabelName: c.Name,
+		},
+	}
+
+	machineList := &capiv1.MachineList{}
+	if err := r.Client.List(context.TODO(), machineList, selectors...); err != nil {
+		return nil
+	}
+
+	for _, m := range machineList.Items {
+		if m.Spec.Bootstrap.ConfigRef != nil &&
+			m.Spec.Bootstrap.ConfigRef.GroupVersionKind().GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+			name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.Bootstrap.ConfigRef.Name}
+			result = append(result, ctrl.Request{NamespacedName: name})
+		}
+	}
+
+	if feature.Gates.Enabled(feature.MachinePool) {
+		machinePoolList := &expv1.MachinePoolList{}
+		if err := r.Client.List(context.TODO(), machinePoolList, selectors...); err != nil {
+			return nil
+		}
+
+		for _, mp := range machinePoolList.Items {
+			if mp.Spec.Template.Spec.Bootstrap.ConfigRef != nil &&
+				mp.Spec.Template.Spec.Bootstrap.ConfigRef.GroupVersionKind().GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+				name := client.ObjectKey{Namespace: mp.Namespace, Name: mp.Spec.Template.Spec.Bootstrap.ConfigRef.Name}
+				result = append(result, ctrl.Request{NamespacedName: name})
+			}
+		}
+	}
+
+	return result
 }

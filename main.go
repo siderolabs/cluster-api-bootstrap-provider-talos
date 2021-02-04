@@ -16,9 +16,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"math/rand"
 	"os"
+	"time"
 
+	"github.com/spf13/pflag"
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/controllers"
@@ -26,6 +30,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	cgrecord "k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/feature"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -40,21 +46,37 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
+	_ = expv1.AddToScheme(scheme)
 	_ = bootstrapv1alpha2.AddToScheme(scheme)
 	_ = bootstrapv1alpha3.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
-func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var webhookPort int
+var (
+	metricsAddr          string
+	enableLeaderElection bool
+	webhookPort          int
+)
 
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+func InitFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&metricsAddr, "metrics-addr", ":8080",
+		"The address the metric endpoint binds to.")
+
+	fs.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
-	flag.IntVar(&webhookPort, "webhook-port", 0, "Webhook Server port, disabled by default. When enabled, the manager will only work as webhook server, no reconcilers are installed.")
-	flag.Parse()
+
+	fs.IntVar(&webhookPort, "webhook-port", 0,
+		"Webhook Server port, disabled by default. When enabled, the manager will only work as webhook server, no reconcilers are installed.")
+
+	feature.MutableGates.AddFlag(fs)
+}
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	InitFlags(pflag.CommandLine)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
 
 	ctrl.SetLogger(zap.New(func(o *zap.Options) {
 		o.Development = true
@@ -79,12 +101,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := context.Background()
+
 	if webhookPort == 0 {
 		if err = (&controllers.TalosConfigReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("TalosConfig"),
 			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TalosConfig")
 			os.Exit(1)
 		}
