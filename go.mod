@@ -1,22 +1,23 @@
 module github.com/talos-systems/cluster-api-bootstrap-provider-talos
 
-go 1.13
+go 1.15
 
 replace github.com/kubernetes-sigs/bootkube => github.com/talos-systems/bootkube v0.14.1-0.20200131192519-720c01d02032
 
 require (
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.1
+	github.com/spf13/pflag v1.0.5
 	github.com/talos-systems/crypto v0.2.0
 	github.com/talos-systems/talos/pkg/machinery v0.0.0-20201203014938-ed31056d91d0
-	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.18.2
-	k8s.io/apiextensions-apiserver v0.18.2
-	k8s.io/apimachinery v0.18.2
-	k8s.io/client-go v0.18.2
-	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
-	sigs.k8s.io/cluster-api v0.3.6
-	sigs.k8s.io/controller-runtime v0.6.0
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.17.9
+	k8s.io/apiextensions-apiserver v0.17.9
+	k8s.io/apimachinery v0.17.9
+	k8s.io/client-go v0.17.9
+	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
+	sigs.k8s.io/cluster-api v0.3.12
+	sigs.k8s.io/controller-runtime v0.5.14
 )
