@@ -121,12 +121,16 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 // writeBootstrapData creates a new secret with the data passed in as input
 func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *TalosConfigScope, data []byte) error {
 	// Create ca secret only if it doesn't already exist
-	_, err := r.fetchSecret(ctx, scope.Config, scope.Machine.Name+"-bootstrap-data")
+	ownerName := scope.ConfigOwner.GetName()
+
+	r.Log.Info("handling bootstrap data for ", "owner", ownerName)
+
+	_, err := r.fetchSecret(ctx, scope.Config, scope.ConfigOwner.GetName()+"-bootstrap-data")
 	if k8serrors.IsNotFound(err) {
 		certSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: scope.Config.Namespace,
-				Name:      scope.Machine.Name + "-bootstrap-data",
+				Name:      scope.ConfigOwner.GetName() + "-bootstrap-data",
 				Labels: map[string]string{
 					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
