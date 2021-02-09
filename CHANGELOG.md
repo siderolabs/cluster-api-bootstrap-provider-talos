@@ -1,6 +1,18 @@
 
+<a name="v0.2.0-alpha.9"></a>
+## [v0.2.0-alpha.9](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.8...v0.2.0-alpha.9) (2021-02-04)
+
+### Feat
+
+* support machinepools in bootstrapper
+
+### Fix
+
+* ensure proper ordering of packet machine config handling
+
+
 <a name="v0.2.0-alpha.8"></a>
-## [v0.2.0-alpha.8](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.7...v0.2.0-alpha.8) (2020-11-30)
+## [v0.2.0-alpha.8](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.7...v0.2.0-alpha.8) (2020-12-03)
 
 ### Feat
 
@@ -8,7 +20,7 @@
 
 ### Release
 
-* **v0.2.0-alpha.7:** prepare release
+* **v0.2.0-alpha.8:** prepare release
 
 
 <a name="v0.2.0-alpha.7"></a>
@@ -17,6 +29,11 @@
 ### Fix
 
 * update talos machinery pkg
+
+### Release
+
+* **v0.2.0-alpha.7:** prepare release
+
 
 <a name="v0.2.0-alpha.6"></a>
 ## [v0.2.0-alpha.6](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.5...v0.2.0-alpha.6) (2020-10-20)
@@ -60,17 +77,22 @@
 ### Fix
 
 * ensure version is not nil
-* change k8s version if it has leading "v"
 
 ### Release
 
-* **v0.2.0-alpha.1:** prepare release
-* **v0.2.0-alpha.2:** prepare release
 * **v0.2.0-alpha.3:** prepare release
 
 
 <a name="v0.2.0-alpha.2"></a>
-## [v0.2.0-alpha.2](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.1...v0.2.0-alpha.2) (2020-08-17)
+## [v0.2.0-alpha.2](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.1...v0.2.0-alpha.2) (2020-08-19)
+
+### Fix
+
+* change k8s version if it has leading "v"
+
+### Release
+
+* **v0.2.0-alpha.2:** prepare release
 
 
 <a name="v0.2.0-alpha.1"></a>
@@ -89,5 +111,5 @@
 
 ### Release
 
-* **v0.2.0-alpha.2:** prepare release
+* **v0.2.0-alpha.1:** prepare release
 
