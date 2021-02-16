@@ -27,6 +27,7 @@ import (
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/talos-systems/talos/pkg/machinery/config"
 	"github.com/talos-systems/talos/pkg/machinery/config/configpatcher"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
@@ -54,6 +55,10 @@ import (
 
 const (
 	controllerName = "cabpt-controller"
+)
+
+var (
+	defaultVersionContract = config.TalosVersion0_8
 )
 
 // TalosConfigReconciler reconciles a TalosConfig object
@@ -383,7 +388,20 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions := []generate.GenOption{generate.WithDNSDomain(clusterDNS)}
 
-	secretBundle, err := generate.NewSecretsBundle()
+	// default version contract to v0.8 unless user specifies something different.
+	versionContract := defaultVersionContract
+
+	if scope.Config.Spec.TalosVersion != "" {
+		var err error
+		versionContract, err = config.ParseContractFromVersion(scope.Config.Spec.TalosVersion)
+		if err != nil {
+			return retBundle, fmt.Errorf("invalid talos-version: %w", err)
+		}
+	}
+
+	genOptions = append(genOptions, generate.WithVersionContract(versionContract))
+
+	secretBundle, err := generate.NewSecretsBundle(generate.NewClock(), genOptions...)
 	if err != nil {
 		return retBundle, err
 	}
