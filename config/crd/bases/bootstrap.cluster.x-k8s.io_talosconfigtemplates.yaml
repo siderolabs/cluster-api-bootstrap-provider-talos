@@ -104,6 +104,8 @@ spec:
                         type: string
                       generateType:
                         type: string
+                      talosVersion:
+                        type: string
                     required:
                     - generateType
                     type: object
