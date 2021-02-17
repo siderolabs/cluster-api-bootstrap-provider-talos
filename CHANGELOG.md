@@ -1,4 +1,12 @@
 
+<a name="v0.2.0-alpha.10"></a>
+## [v0.2.0-alpha.10](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.9...v0.2.0-alpha.10) (2021-02-16)
+
+### Feat
+
+* support talosVersion in talosconfig CRD
+
+
 <a name="v0.2.0-alpha.9"></a>
 ## [v0.2.0-alpha.9](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.8...v0.2.0-alpha.9) (2021-02-04)
 
@@ -9,6 +17,10 @@
 ### Fix
 
 * ensure proper ordering of packet machine config handling
+
+### Release
+
+* **v0.2.0-alpha.9:** prepare release
 
 
 <a name="v0.2.0-alpha.8"></a>
