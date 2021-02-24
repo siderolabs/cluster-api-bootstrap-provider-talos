@@ -1,10 +1,21 @@
+<a name="v0.2.0-alpha.11"></a>
+## [v0.2.0-alpha.11](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.10...v0.2.0-alpha.11) (2021-02-19)
+
+### Feat
+
+* support EXP_MACHINE_POOL flag
+
 
 <a name="v0.2.0-alpha.10"></a>
-## [v0.2.0-alpha.10](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.9...v0.2.0-alpha.10) (2021-02-16)
+## [v0.2.0-alpha.10](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.9...v0.2.0-alpha.10) (2021-02-17)
 
 ### Feat
 
 * support talosVersion in talosconfig CRD
+
+### Release
+
+* **v0.2.0-alpha.10:** prepare release
 
 
 <a name="v0.2.0-alpha.9"></a>
@@ -124,4 +135,3 @@
 ### Release
 
 * **v0.2.0-alpha.1:** prepare release
-
