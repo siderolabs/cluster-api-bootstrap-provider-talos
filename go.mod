@@ -1,8 +1,6 @@
 module github.com/talos-systems/cluster-api-bootstrap-provider-talos
 
-go 1.15
-
-replace github.com/kubernetes-sigs/bootkube => github.com/talos-systems/bootkube v0.14.1-0.20200131192519-720c01d02032
+go 1.16
 
 require (
 	github.com/evanphx/json-patch v4.9.0+incompatible

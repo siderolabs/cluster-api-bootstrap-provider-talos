@@ -1,40 +1,57 @@
-# syntax = docker/dockerfile-upstream:1.1.4-experimental
+# syntax = docker/dockerfile-upstream:1.2.0-labs
 
-FROM golang:1.15 AS build
+# Meta args applied to stage base names.
+
+ARG TOOLS
+ARG PKGS
+
+# Resolve package images using ${PKGS} to be used later in COPY --from=.
+
+FROM ghcr.io/talos-systems/ca-certificates:${PKGS} AS pkg-ca-certificates
+FROM ghcr.io/talos-systems/fhs:${PKGS} AS pkg-fhs
+
+# The base target provides the base for running various tasks against the source
+# code
+
+FROM --platform=${BUILDPLATFORM} ${TOOLS} AS build
+SHELL ["/toolchain/bin/bash", "-c"]
+ENV PATH /toolchain/bin:/toolchain/go/bin:/go/bin
+RUN ["/toolchain/bin/mkdir", "/bin", "/tmp"]
+RUN ["/toolchain/bin/ln", "-svf", "/toolchain/bin/bash", "/bin/sh"]
+RUN ["/toolchain/bin/ln", "-svf", "/toolchain/etc/ssl", "/etc/ssl"]
 ENV GO111MODULE on
 ENV GOPROXY https://proxy.golang.org
 ENV CGO_ENABLED 0
-WORKDIR /tmp
-RUN go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.8
-RUN go get k8s.io/code-generator/cmd/conversion-gen@v0.18.2
+ENV GOCACHE /.cache/go-build
+ENV GOMODCACHE /.cache/mod
+RUN --mount=type=cache,target=/.cache go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0
+RUN --mount=type=cache,target=/.cache go install k8s.io/code-generator/cmd/conversion-gen@v0.21.0
 WORKDIR /src
 COPY ./go.mod ./
 COPY ./go.sum ./
-RUN go mod download
-RUN go mod verify
+RUN --mount=type=cache,target=/.cache go mod download
+RUN --mount=type=cache,target=/.cache go mod verify
 COPY ./ ./
-RUN go list -mod=readonly all >/dev/null
-RUN ! go mod tidy -v 2>&1 | grep .
+RUN --mount=type=cache,target=/.cache go list -mod=readonly all >/dev/null
+RUN --mount=type=cache,target=/.cache ! go mod tidy -v 2>&1 | grep .
 
 FROM build AS manifests-build
 ARG NAME
-RUN controller-gen crd:crdVersions=v1 paths="./api/..." output:crd:dir=config/crd/bases output:webhook:dir=config/webhook webhook
-RUN controller-gen rbac:roleName=manager-role paths="./controllers/..." output:rbac:dir=config/rbac
+RUN --mount=type=cache,target=/.cache controller-gen crd:crdVersions=v1 paths="./api/..." output:crd:dir=config/crd/bases output:webhook:dir=config/webhook webhook
+RUN --mount=type=cache,target=/.cache controller-gen rbac:roleName=manager-role paths="./controllers/..." output:rbac:dir=config/rbac
 FROM scratch AS manifests
 COPY --from=manifests-build /src/config /config
 
 FROM build AS generate-build
-RUN controller-gen object:headerFile=./hack/boilerplate.go.txt paths="./..."
-RUN	conversion-gen --input-dirs=./api/v1alpha2 --output-base ./ --output-file-base=zz_generated.conversion --go-header-file=./hack/boilerplate.go.txt
+RUN --mount=type=cache,target=/.cache controller-gen object:headerFile=./hack/boilerplate.go.txt paths="./..."
+RUN	--mount=type=cache,target=/.cache conversion-gen --input-dirs=./api/v1alpha2 --output-base ./ --output-file-base=zz_generated.conversion --go-header-file=./hack/boilerplate.go.txt
+
 FROM scratch AS generate
 COPY --from=generate-build /src/api /api
 
-FROM k8s.gcr.io/hyperkube:v1.17.0 AS release-build
-RUN apt update -y \
-  && apt install -y curl \
-  && curl -LO https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv3.4.0/kustomize_v3.4.0_linux_amd64.tar.gz \
-  && tar -xf kustomize_v3.4.0_linux_amd64.tar.gz -C /usr/local/bin \
-  && rm kustomize_v3.4.0_linux_amd64.tar.gz
+FROM --platform=${BUILDPLATFORM} alpine:3.13 AS release-build
+ADD https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.0/kustomize_v4.1.0_linux_amd64.tar.gz .
+RUN  tar -xf kustomize_v4.1.0_linux_amd64.tar.gz -C /usr/local/bin && rm kustomize_v4.1.0_linux_amd64.tar.gz
 COPY ./config ./config
 ARG REGISTRY_AND_USERNAME
 ARG NAME
@@ -44,16 +61,19 @@ RUN cd config/manager \
   && cd - \
   && kustomize build config > /bootstrap-components.yaml \
   && cp config/metadata/metadata.yaml /metadata.yaml
+
 FROM scratch AS release
 COPY --from=release-build /bootstrap-components.yaml /bootstrap-components.yaml
 COPY --from=release-build /metadata.yaml /metadata.yaml
 
 FROM build AS binary
-RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux go build -ldflags "-s -w" -o /manager
+ARG TARGETARCH
+RUN	--mount=type=cache,target=/.cache GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-s -w" -o /manager
 RUN chmod +x /manager
 
 FROM scratch AS container
-COPY --from=docker.io/autonomy/ca-certificates:v0.1.0 / /
-COPY --from=docker.io/autonomy/fhs:v0.1.0 / /
+COPY --from=pkg-ca-certificates / /
+COPY --from=pkg-fhs / /
 COPY --from=binary /manager /manager
+LABEL org.opencontainers.image.source https://github.com/talos-systems/cluster-api-bootstrap-provider-talos
 ENTRYPOINT [ "/manager" ]
