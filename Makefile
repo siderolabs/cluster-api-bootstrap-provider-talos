@@ -1,5 +1,5 @@
-REGISTRY ?= docker.io
-USERNAME ?= autonomy
+REGISTRY ?= ghcr.io
+USERNAME ?= talos-systems
 SHA ?= $(shell git describe --match=none --always --abbrev=8 --dirty)
 TAG ?= $(shell git describe --tag --always --dirty)
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
@@ -7,6 +7,9 @@ REGISTRY_AND_USERNAME := $(REGISTRY)/$(USERNAME)
 NAME := cluster-api-talos-controller
 
 ARTIFACTS := _out
+
+TOOLS ?= ghcr.io/talos-systems/tools:v0.5.0
+PKGS ?= v0.5.0
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
@@ -18,6 +21,8 @@ COMMON_ARGS += --platform=$(PLATFORM)
 COMMON_ARGS += --build-arg=REGISTRY_AND_USERNAME=$(REGISTRY_AND_USERNAME)
 COMMON_ARGS += --build-arg=NAME=$(NAME)
 COMMON_ARGS += --build-arg=TAG=$(TAG)
+COMMON_ARGS += --build-arg=PKGS=$(PKGS)
+COMMON_ARGS += --build-arg=TOOLS=$(TOOLS)
 
 all: manifests container
 
@@ -63,7 +68,7 @@ init: ## Initialize the project.
 
 .PHONY: generate
 generate: ## Generate source code.
-	@$(MAKE) local-$@ DEST=./
+	@$(MAKE) local-$@ DEST=./ PLATFORM=linux/amd64
 
 .PHONY: container
 container: generate ## Build the container image.
@@ -71,11 +76,11 @@ container: generate ## Build the container image.
 
 .PHONY: manifests
 manifests: ## Generate manifests (e.g. CRD, RBAC, etc.).
-	@$(MAKE) local-$@ DEST=./
+	@$(MAKE) local-$@ DEST=./ PLATFORM=linux/amd64
 
 .PHONY: release
 release: manifests container ## Create the release YAML. The build result will be ouput to the specified local destination.
-	@$(MAKE) local-$@ DEST=./$(ARTIFACTS)
+	@$(MAKE) local-$@ DEST=./$(ARTIFACTS) PLATFORM=linux/amd64
 
 .PHONY: deploy
 deploy: manifests ## Deploy to a cluster. This is for testing purposes only.
