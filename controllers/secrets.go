@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 
-	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/crypto/x509"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
@@ -69,7 +68,7 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 				clusterv1.ClusterLabelName: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(scope.Cluster, bootstrapv1alpha3.GroupVersion.WithKind("Cluster")),
+				*metav1.NewControllerRef(scope.Cluster, clusterv1.GroupVersion.WithKind("Cluster")),
 			},
 		},
 		Data: map[string][]byte{
@@ -98,7 +97,7 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 					clusterv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(scope.Cluster, bootstrapv1alpha3.GroupVersion.WithKind("Cluster")),
+					*metav1.NewControllerRef(scope.Cluster, clusterv1.GroupVersion.WithKind("Cluster")),
 				},
 			},
 			Data: map[string][]byte{
@@ -148,23 +147,6 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 			return err
 		}
 	} else if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *TalosConfigReconciler) deleteSecret(ctx context.Context, config *bootstrapv1alpha2.TalosConfig, secretName string) error {
-	err := r.Client.Delete(ctx,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: config.GetNamespace(),
-				Name:      secretName,
-			},
-		},
-	)
-
-	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
 
