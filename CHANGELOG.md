@@ -1,9 +1,27 @@
+
+<a name="v0.2.0-alpha.12"></a>
+## [v0.2.0-alpha.12](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.11...v0.2.0-alpha.12) (2021-05-14)
+
+### Chore
+
+* rework build, move to ghcr.io, build for arm64/amd64
+
+### Fix
+
+* back down resource requests
+* ensure secrets are deleted when cluster is dropped
+
+
 <a name="v0.2.0-alpha.11"></a>
 ## [v0.2.0-alpha.11](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.10...v0.2.0-alpha.11) (2021-02-19)
 
 ### Feat
 
 * support EXP_MACHINE_POOL flag
+
+### Release
+
+* **v0.2.0-alpha.11:** prepare release
 
 
 <a name="v0.2.0-alpha.10"></a>
