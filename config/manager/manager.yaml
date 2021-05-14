@@ -19,6 +19,7 @@ spec:
         - command:
             - /manager
           args:
+            - --metrics-addr=127.0.0.1:8080
             - --enable-leader-election
             - "--feature-gates=MachinePool=${EXP_MACHINE_POOL:=false}"
           image: controller:latest
