@@ -1,3 +1,14 @@
+<a name="v0.2.0-beta.0"></a>
+## [v0.2.0-beta.0](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.13...v0.2.0-beta.0) (2021-06-08)
+
+### Chore
+
+* update machinery to latest stable
+
+### Fix
+
+* remove unused kube-rbac-proxy, protect metrics-addr
+
 
 <a name="v0.2.0-alpha.12"></a>
 ## [v0.2.0-alpha.12](https://github.com/talos-systems/talos/compare/v0.2.0-alpha.11...v0.2.0-alpha.12) (2021-05-14)
@@ -10,6 +21,10 @@
 
 * back down resource requests
 * ensure secrets are deleted when cluster is dropped
+
+### Release
+
+* **v0.2.0-alpha.12:** prepare release
 
 
 <a name="v0.2.0-alpha.11"></a>
