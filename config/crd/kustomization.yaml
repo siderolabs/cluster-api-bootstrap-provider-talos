@@ -3,6 +3,7 @@
 # It should be run by config/default
 commonLabels:
     cluster.x-k8s.io/v1alpha3: v1alpha3  
+    cluster.x-k8s.io/v1alpha4: v1alpha3  
 
 resources:
 - bases/bootstrap.cluster.x-k8s.io_talosconfigs.yaml

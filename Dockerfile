@@ -71,12 +71,13 @@ ARG TAG
 RUN cd config/manager \
   && kustomize edit set image controller=${REGISTRY_AND_USERNAME}/${NAME}:${TAG} \
   && cd - \
-  && kustomize build config > /bootstrap-components.yaml \
+  && kustomize build config/default > /bootstrap-components.yaml \
   && cp config/metadata/metadata.yaml /metadata.yaml
 
 FROM scratch AS release
-COPY --from=release-build /bootstrap-components.yaml /bootstrap-components.yaml
-COPY --from=release-build /metadata.yaml /metadata.yaml
+ARG TAG
+COPY --from=release-build /bootstrap-components.yaml /bootstrap-talos/${TAG}/bootstrap-components.yaml
+COPY --from=release-build /metadata.yaml /bootstrap-talos/${TAG}/metadata.yaml
 
 FROM build AS binary
 ARG TARGETARCH

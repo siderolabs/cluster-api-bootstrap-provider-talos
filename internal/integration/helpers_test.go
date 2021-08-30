@@ -23,7 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -85,8 +86,11 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 
 	require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
 
+	patchHelper, err := patch.NewHelper(cluster, c)
+	require.NoError(t, err)
+
 	cluster.Status.InfrastructureReady = true
-	require.NoError(t, c.Status().Update(ctx, cluster))
+	require.NoError(t, patchHelper.Patch(ctx, cluster))
 
 	return cluster
 }

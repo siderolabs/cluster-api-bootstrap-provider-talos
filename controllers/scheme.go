@@ -7,8 +7,8 @@ package controllers
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha4"
 
 	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"

@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"

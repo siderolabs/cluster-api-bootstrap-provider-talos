@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
-	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -74,11 +74,7 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	c, err := client.New(restCfg, client.Options{})
 	require.NoError(t, err)
 
-	stopCAPI(ctx, t, c)
-
 	waitForCAPIAvailability(ctx, t, c)
-
-	// TODO(aleksi): make one manager per test / namespace (move to setupTest)?
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{})
 	require.NoError(t, err)
@@ -91,7 +87,7 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	require.NoError(t, err)
 
 	go func() {
-		assert.NoError(t, mgr.Start(ctx.Done()))
+		assert.NoError(t, mgr.Start(ctx))
 	}()
 
 	t.Log("Setup done.")
@@ -129,6 +125,28 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 				if err == nil {
 					t.Log("Waiting for ns deletion", namespace)
 
+					// a bit of black magic here:
+					//   as we don't set infrastructureRef on machines, capi controller will hang forever
+					//   trying to delete infrastructure data for the machine
+					//   this allows us to override that removing the finalizer(s)
+					var machineList capiv1.MachineList
+
+					err = c.List(ctx, &machineList, client.InNamespace(namespace))
+					if err != nil {
+						t.Log("error listing machines", err)
+
+						continue
+					}
+
+					for _, machine := range machineList.Items {
+						machine.Finalizers = nil
+
+						if err = c.Update(ctx, &machine); err != nil {
+							// conflicts might be ignored here, as eventually this will succeed
+							t.Log("error updating machine's finalizers", err)
+						}
+					}
+
 					time.Sleep(time.Second)
 
 					continue
@@ -139,7 +157,6 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 				}
 
 				break
-
 			}
 		})
 	}
@@ -258,45 +275,6 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	return res.cfg
 }
 
-// stopCAPI stops CAPI components that we don't need so they don't interfere with our tests.
-//
-// Context cancelation is honored.
-func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
-	t.Helper()
-
-	t.Log("Stopping CAPI components ...")
-
-	var deployment appsv1.Deployment
-	key := client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}
-
-	require.NoError(t, c.Get(ctx, key, &deployment))
-
-	patchHelper, err := patch.NewHelper(&deployment, c)
-	require.NoError(t, err)
-
-	deployment.Spec.Replicas = pointer.ToInt32(0)
-
-	require.NoError(t, patchHelper.Patch(ctx, &deployment))
-
-	for {
-		var deployment appsv1.Deployment
-
-		require.NoError(t, c.Get(ctx, key, &deployment))
-
-		if deployment.Status.Replicas == 0 {
-			break
-		}
-
-		t.Logf("Waiting: %+v ...", deployment.Status)
-		sleepCtx(ctx, 5*time.Second)
-		if ctx.Err() != nil {
-			t.Fatalf("Failed to stop CAPI components: %s.", ctx.Err())
-		}
-	}
-
-	t.Log("Done stopping CAPI components.")
-}
-
 // waitForCAPIAvailability waits for needed CAPI components availability.
 //
 // Context cancelation is honored.
@@ -305,9 +283,7 @@ func waitForCAPIAvailability(ctx context.Context, t *testing.T, c client.Client)
 
 	t.Log("Waiting for CAPI availability ...")
 
-	// TODO is is not entirely clear why we need webhooks
-
-	key := client.ObjectKey{Namespace: "capi-webhook-system", Name: "capi-controller-manager"}
+	key := client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}
 
 	for {
 		var deployment appsv1.Deployment

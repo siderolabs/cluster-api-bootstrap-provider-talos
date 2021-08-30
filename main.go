@@ -32,13 +32,13 @@ var (
 )
 
 func InitFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&metricsAddr, "metrics-addr", ":8080",
+	fs.StringVar(&metricsAddr, "metrics-bind-addr", ":8080",
 		"The address the metric endpoint binds to.")
 
 	fs.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 
-	fs.IntVar(&webhookPort, "webhook-port", 0,
+	fs.IntVar(&webhookPort, "webhook-port", 9443,
 		"Webhook Server port, disabled by default. When enabled, the manager will only work as webhook server, no reconcilers are installed.")
 
 	feature.MutableGates.AddFlag(fs)
@@ -65,7 +65,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "controller-leader-election-cabpt",
-		Port:               9443,
+		Port:               webhookPort,
 		EventBroadcaster:   broadcaster,
 	})
 	if err != nil {
@@ -75,25 +75,24 @@ func main() {
 
 	ctx := context.Background()
 
-	if webhookPort == 0 {
-		if err = (&controllers.TalosConfigReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("TalosConfig"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "TalosConfig")
-			os.Exit(1)
-		}
-	} else {
-		if err = (&bootstrapv1alpha3.TalosConfigTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "TalosConfigTemplate")
-			os.Exit(1)
-		}
-		if err = (&bootstrapv1alpha3.TalosConfig{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "TalosConfig")
-			os.Exit(1)
-		}
+	if err = (&controllers.TalosConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("TalosConfig"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TalosConfig")
+		os.Exit(1)
 	}
+
+	if err = (&bootstrapv1alpha3.TalosConfigTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TalosConfigTemplate")
+		os.Exit(1)
+	}
+	if err = (&bootstrapv1alpha3.TalosConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TalosConfig")
+		os.Exit(1)
+	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

@@ -132,7 +132,7 @@ steps:
         - sha512
       draft: true
       files:
-        - _out/*
+        - _out/bootstrap-talos/*/*
       note: _out/RELEASE_NOTES.md
     when:
       event:
@@ -176,6 +176,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 523acbd6b6e92b11249b0515fe28ef34dc1c3c926826e84ce9a1de3412a6a65e
+hmac: a7d3d09b2ec221337f14cde8f5f2a872a4c3500df09b7f27e6a169a4eb35944b
 
 ...

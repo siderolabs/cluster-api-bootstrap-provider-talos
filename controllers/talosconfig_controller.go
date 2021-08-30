@@ -24,9 +24,9 @@ import (
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
-	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -88,17 +88,13 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		WithOptions(options).
 		Watches(
 			&source.Kind{Type: &capiv1.Machine{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.MachineToBootstrapMapFunc),
-			},
+			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
 		)
 
 	if feature.Gates.Enabled(feature.MachinePool) {
 		b = b.Watches(
 			&source.Kind{Type: &expv1.MachinePool{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.MachinePoolToBootstrapMapFunc),
-			},
+			handler.EnqueueRequestsFromMapFunc(r.MachinePoolToBootstrapMapFunc),
 		)
 	}
 
@@ -109,9 +105,7 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 
 	err = c.Watch(
 		&source.Kind{Type: &capiv1.Cluster{}},
-		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: handler.ToRequestsFunc(r.ClusterToTalosConfigs),
-		},
+		handler.EnqueueRequestsFromMapFunc(r.ClusterToTalosConfigs),
 		predicates.ClusterUnpausedAndInfrastructureReady(r.Log),
 	)
 	if err != nil {
@@ -127,8 +121,7 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 // +kubebuilder:rbac:groups=exp.cluster.x-k8s.io,resources=machinepools;machinepools/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
-func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr error) {
-	ctx := context.Background()
+func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, rerr error) {
 	log := r.Log.WithName(controllerName).
 		WithName(fmt.Sprintf("namespace=%s", req.Namespace)).
 		WithName(fmt.Sprintf("talosconfig=%s", req.Name))
@@ -451,8 +444,8 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 // MachineToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
 // request for reconciliation of TalosConfig.
-func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o handler.MapObject) []ctrl.Request {
-	m, ok := o.Object.(*capiv1.Machine)
+func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o client.Object) []ctrl.Request {
+	m, ok := o.(*capiv1.Machine)
 	if !ok {
 		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
 	}
@@ -467,8 +460,8 @@ func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o handler.MapObject) [
 
 // MachinePoolToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
 // request for reconciliation of TalosConfig.
-func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o handler.MapObject) []ctrl.Request {
-	m, ok := o.Object.(*expv1.MachinePool)
+func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o client.Object) []ctrl.Request {
+	m, ok := o.(*expv1.MachinePool)
 	if !ok {
 		panic(fmt.Sprintf("Expected a MachinePool but got a %T", o))
 	}
@@ -484,10 +477,10 @@ func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o handler.MapObjec
 
 // ClusterToTalosConfigs is a handler.ToRequestsFunc to be used to enqeue
 // requests for reconciliation of TalosConfigs.
-func (r *TalosConfigReconciler) ClusterToTalosConfigs(o handler.MapObject) []ctrl.Request {
+func (r *TalosConfigReconciler) ClusterToTalosConfigs(o client.Object) []ctrl.Request {
 	result := []ctrl.Request{}
 
-	c, ok := o.Object.(*capiv1.Cluster)
+	c, ok := o.(*capiv1.Cluster)
 	if !ok {
 		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 	}
