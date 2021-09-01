@@ -18,15 +18,16 @@ package controllers
 import (
 	"context"
 
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/crypto/x509"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 )
 
 func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstrapv1alpha3.TalosConfig, secretName string) (*corev1.Secret, error) {
@@ -65,10 +66,10 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 			Namespace: scope.Config.Namespace,
 			Name:      scope.Cluster.Name + "-talos",
 			Labels: map[string]string{
-				clusterv1.ClusterLabelName: scope.Cluster.Name,
+				capiv1.ClusterLabelName: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(scope.Cluster, clusterv1.GroupVersion.WithKind("Cluster")),
+				*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
 			},
 		},
 		Data: map[string][]byte{
@@ -94,10 +95,10 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 				Namespace: scope.Config.Namespace,
 				Name:      scope.Cluster.Name + "-ca",
 				Labels: map[string]string{
-					clusterv1.ClusterLabelName: scope.Cluster.Name,
+					capiv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(scope.Cluster, clusterv1.GroupVersion.WithKind("Cluster")),
+					*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
 				},
 			},
 			Data: map[string][]byte{
@@ -131,7 +132,7 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 				Namespace: scope.Config.Namespace,
 				Name:      ownerName + "-bootstrap-data",
 				Labels: map[string]string{
-					clusterv1.ClusterLabelName: scope.Cluster.Name,
+					capiv1.ClusterLabelName: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),

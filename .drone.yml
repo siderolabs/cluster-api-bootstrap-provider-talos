@@ -3,6 +3,15 @@ kind: pipeline
 type: kubernetes
 name: default
 
+services:
+  - name: docker
+    image: docker:20.10-dind
+    entrypoint: [dockerd]
+    privileged: true
+    volumes:
+      - name: docker-socket
+        path: /var/run
+
 steps:
   - name: setup-ci
     image: autonomy/build-container:latest
@@ -24,6 +33,26 @@ steps:
       PLATFORM: linux/amd64,linux/arm64
     commands:
       - make
+    when:
+      event:
+        include:
+          - pull_request
+    volumes:
+      - name: docker-socket
+        path: /var/run
+      - name: outerdockersock
+        path: /var/outer-run
+      - name: docker
+        path: /root/.docker/buildx
+
+  - name: test-pull-request
+    image: autonomy/build-container:latest
+    pull: always
+    environment:
+      PLATFORM: linux/amd64,linux/arm64
+    commands:
+      - make env-up
+      - make test
     when:
       event:
         include:
@@ -126,8 +155,5 @@ trigger:
 
 depends_on:
   - default
----
-kind: signature
-hmac: 2847e7d6100e958e0391d8c3822c13fca9fb50de86ec5ee648a9eacce0978e5b
 
 ...

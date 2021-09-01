@@ -39,15 +39,22 @@ FROM build AS manifests-build
 ARG NAME
 RUN --mount=type=cache,target=/.cache controller-gen crd:crdVersions=v1 paths="./api/..." output:crd:dir=config/crd/bases output:webhook:dir=config/webhook webhook
 RUN --mount=type=cache,target=/.cache controller-gen rbac:roleName=manager-role paths="./controllers/..." output:rbac:dir=config/rbac
+
 FROM scratch AS manifests
 COPY --from=manifests-build /src/config /config
 
 FROM build AS generate-build
 RUN --mount=type=cache,target=/.cache controller-gen object:headerFile=./hack/boilerplate.go.txt paths="./..."
-RUN	--mount=type=cache,target=/.cache conversion-gen --input-dirs=./api/v1alpha2 --output-base ./ --output-file-base=zz_generated.conversion --go-header-file=./hack/boilerplate.go.txt
+RUN --mount=type=cache,target=/.cache conversion-gen --input-dirs=./api/v1alpha2 --output-base ./ --output-file-base=zz_generated.conversion --go-header-file=./hack/boilerplate.go.txt
 
 FROM scratch AS generate
 COPY --from=generate-build /src/api /api
+
+FROM build AS integration-test-build
+RUN --mount=type=cache,target=/.cache go test -v -c ./internal/integration
+
+FROM scratch AS integration-test
+COPY --from=integration-test-build /src/integration.test /integration.test
 
 FROM --platform=${BUILDPLATFORM} alpine:3.13 AS release-build
 ADD https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.0/kustomize_v4.1.0_linux_amd64.tar.gz .
@@ -68,7 +75,7 @@ COPY --from=release-build /metadata.yaml /metadata.yaml
 
 FROM build AS binary
 ARG TARGETARCH
-RUN	--mount=type=cache,target=/.cache GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-s -w" -o /manager
+RUN --mount=type=cache,target=/.cache GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-s -w" -o /manager
 RUN chmod +x /manager
 
 FROM scratch AS container

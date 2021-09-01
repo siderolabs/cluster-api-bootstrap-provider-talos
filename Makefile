@@ -10,6 +10,8 @@ ARTIFACTS := _out
 
 TOOLS ?= ghcr.io/talos-systems/tools:v0.5.0
 PKGS ?= v0.5.0
+TALOS_VERSION ?= v0.12.0
+K8S_VERSION ?= 1.21.4
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
@@ -106,3 +108,26 @@ run: install ## Run the controller locally. This is for testing purposes only.
 .PHONY: clean
 clean:
 	@rm -rf $(ARTIFACTS)
+
+# Make `make test` behave just like `go test` regarding relative paths.
+test:
+	@$(MAKE) local-integration-test DEST=./internal/integration PLATFORM=linux/amd64
+	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v
+
+talosctl:
+	curl -Lo talosctl https://github.com/talos-systems/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64
+	chmod +x ./talosctl
+
+env-up: talosctl
+	./talosctl cluster create \
+		--name=cabpt-env \
+		--kubernetes-version=$(K8S_VERSION) \
+		--mtu=1450 \
+		--memory=2048 \
+		--cpus=2.0 \
+		--crashdump
+	./talosctl -n 10.5.0.2 kubeconfig -f kubeconfig
+
+env-down: talosctl
+	./talosctl cluster destroy \
+		--name=cabpt-env

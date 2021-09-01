@@ -23,3 +23,6 @@ bin
 *.swo
 *~
 _out/
+
+talosctl
+kubeconfig
