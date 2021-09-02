@@ -51,7 +51,9 @@ FROM scratch AS generate
 COPY --from=generate-build /src/api /api
 
 FROM build AS integration-test-build
-RUN --mount=type=cache,target=/.cache go test -v -c ./internal/integration
+ENV CGO_ENABLED 1
+ARG GO_LDFLAGS="-linkmode=external -extldflags '-static'"
+RUN --mount=type=cache,target=/.cache go test -race -ldflags "${GO_LDFLAGS}" -coverpkg=./... -v -c ./internal/integration
 
 FROM scratch AS integration-test
 COPY --from=integration-test-build /src/integration.test /integration.test

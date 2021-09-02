@@ -17,8 +17,12 @@ package integration
 
 import (
 	"context"
+	"flag"
+	"fmt"
+	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -43,29 +47,41 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-func setup(t *testing.T, doCleanup bool, namespace string) (context.Context, client.Client) {
+var skipCleanupF bool
+
+func init() {
+	const env = "INTEGRATION_SKIP_CLEANUP"
+	def, _ := strconv.ParseBool(os.Getenv(env))
+	flag.BoolVar(&skipCleanupF, "skip-cleanup", def, fmt.Sprintf("Cleanup after tests [%s]", env))
+}
+
+// setupSuite setups the whole test suite.
+func setupSuite(t *testing.T) (context.Context, client.Client) {
 	t.Helper()
 
 	if testing.Short() {
 		t.Skip("Skipping in -short mode.")
 	}
 
-	// cancel context on first Ctrl+C, kill on second
-	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
-	t.Cleanup(cancel)
-	go func() {
-		<-ctx.Done()
-		t.Log("Stopping...")
-		cancel()
-	}()
+	ctx := context.Background()
 
-	// reserve 1 minute for cleanup if possible
-	if doCleanup {
+	if !skipCleanupF {
+		// cancel context on first Ctrl+C, kill on second
+		var stop context.CancelFunc
+		ctx, stop = signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
+		t.Cleanup(stop)
+		go func() {
+			<-ctx.Done()
+			t.Log("Stopping...")
+			stop()
+		}()
+
+		// reserve 1 minute for cleanup if possible
 		deadline, ok := t.Deadline()
 		if ok && time.Until(deadline) > 70*time.Second {
-			var stop context.CancelFunc
-			ctx, stop = context.WithDeadline(ctx, deadline.Add(-60*time.Second))
-			t.Cleanup(stop)
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithDeadline(ctx, deadline.Add(-60*time.Second))
+			t.Cleanup(cancel)
 		}
 	}
 
@@ -74,24 +90,14 @@ func setup(t *testing.T, doCleanup bool, namespace string) (context.Context, cli
 	}))
 
 	installCAPI(ctx, t)
-	restCfg := startTestEnv(ctx, t, doCleanup)
+	restCfg := startTestEnv(ctx, t)
 
 	c, err := client.New(restCfg, client.Options{})
 	require.NoError(t, err)
 
 	stopCAPI(ctx, t, c)
 
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	}
-	err = c.Create(ctx, ns)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		assert.NoError(t, c.Delete(context.Background(), ns)) // not ctx because it can be already canceled
-	})
+	// TODO(aleksi): make one manager per test / namespace (move to setupTest)?
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{})
 	require.NoError(t, err)
@@ -105,7 +111,6 @@ func setup(t *testing.T, doCleanup bool, namespace string) (context.Context, cli
 
 	go func() {
 		assert.NoError(t, mgr.Start(ctx.Done()))
-		cancel()
 	}()
 
 	t.Log("Setup done.")
@@ -113,17 +118,48 @@ func setup(t *testing.T, doCleanup bool, namespace string) (context.Context, cli
 	return ctx, c
 }
 
-// installCAPI installs core CAPI components. Context cancelation is honored.
+// setupTest setups one per-test (subtest) namespace.
+func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
+	t.Helper()
+
+	namespace := fmt.Sprintf("%s-%d", strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-")), time.Now().Unix())
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	err := c.Create(ctx, ns)
+	require.NoError(t, err)
+
+	if !skipCleanupF {
+		t.Cleanup(func() {
+			opts := &client.DeleteOptions{
+				GracePeriodSeconds: pointer.Int64Ptr(0),
+			}
+
+			t.Logf("Deleting namespace %q ...", namespace)
+			assert.NoError(t, c.Delete(context.Background(), ns, opts)) // not ctx because it can be already canceled
+			t.Logf("Namespace %q deleted.", namespace)
+		})
+	}
+
+	return namespace
+}
+
+// installCAPI installs core CAPI components.
+//
+// Context cancelation is honored.
 func installCAPI(ctx context.Context, t *testing.T) {
 	t.Helper()
 
-	// t.FailNow() should be called in the main goroutine, so use assert, not require
-	done := make(chan struct{})
+	// Run InitImages / Init in the goroutine to handle context cancelation.
+	// t.FailNow() should be called in the main goroutine.
+	initErr := make(chan error, 1)
 	go func() {
-		defer close(done)
-
 		clusterctlClient, err := clusterctlclient.New("")
-		if !assert.NoError(t, err) {
+		if err != nil {
+			initErr <- err
 			return
 		}
 
@@ -135,87 +171,88 @@ func installCAPI(ctx context.Context, t *testing.T) {
 			ControlPlaneProviders:   []string{clusterctlclient.NoopProvider},
 		}
 		images, err := clusterctlClient.InitImages(initOpts)
-		if !assert.NoError(t, err) {
+		if err != nil {
+			initErr <- err
 			return
 		}
 
 		t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
 
 		_, err = clusterctlClient.Init(initOpts)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		t.Log("Done installing CAPI core components.")
+		initErr <- err
 	}()
 
+	var err error
 	select {
+	case err = <-initErr:
 	case <-ctx.Done():
-	case <-done:
+		err = ctx.Err()
 	}
 
-	assert.NoError(t, ctx.Err())
+	require.NoError(t, err, "failed to install CAPI core components")
 
-	if t.Failed() {
-		t.FailNow()
-	}
+	t.Log("Done installing CAPI core components.")
 }
 
-// startTestEnv starts envtest environment: installs CRDs, etc. Context cancelation is honored.
-func startTestEnv(ctx context.Context, t *testing.T, doCleanup bool) *rest.Config {
+// startTestEnv starts envtest environment: installs CRDs, etc.
+//
+// Context cancelation is honored.
+func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	t.Helper()
 
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			ErrorIfPathMissing: true,
-			CleanUpAfterUse:    doCleanup,
+			CleanUpAfterUse:    !skipCleanupF,
 		},
 		ErrorIfCRDPathMissing: true,
 		UseExistingCluster:    pointer.BoolPtr(true),
 	}
 
-	// t.FailNow() should be called in the main goroutine, so send errors to channel
-	done := make(chan struct{})
-	var cfg *rest.Config
+	// Run Start in the goroutine to handle context cancelation.
+	// t.FailNow() should be called in the main goroutine.
+	type result struct {
+		cfg *rest.Config
+		err error
+	}
+	startErr := make(chan result, 1)
 	go func() {
-		defer close(done)
-
-		if doCleanup {
+		if !skipCleanupF {
 			t.Cleanup(func() {
 				t.Log("Stopping test-env ...")
 
-				if !assert.NoError(t, testEnv.Stop()) {
+				if err := testEnv.Stop(); err != nil {
+					t.Logf("Failed to stop test-env: %s.", err)
 					return
 				}
 
-				t.Log("Test-env stopped.")
+				t.Logf("Test-env stopped.")
 			})
 		}
 
 		t.Log("Starting test-env ...")
 
-		var err error
-		cfg, err = testEnv.Start()
-		assert.NoError(t, err)
+		cfg, err := testEnv.Start()
+		startErr <- result{cfg, err}
 	}()
 
+	var res result
 	select {
+	case res = <-startErr:
 	case <-ctx.Done():
-	case <-done:
+		res.err = ctx.Err()
 	}
 
-	assert.NoError(t, ctx.Err())
+	require.NoError(t, res.err, "failed to start test-env")
 
-	if t.Failed() {
-		t.FailNow()
-	}
-
-	t.Logf("Test-env started: %s.", cfg.Host)
-	return cfg
+	t.Logf("Test-env started: %s.", res.cfg.Host)
+	return res.cfg
 }
 
 // stopCAPI stops CAPI components so they don't interfere with our tests.
+//
+// Context cancelation is honored.
 func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 	t.Helper()
 
@@ -232,7 +269,7 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 
 	require.NoError(t, patchHelper.Patch(ctx, &deployment))
 
-	for ctx.Err() == nil {
+	for {
 		var deployment appsv1.Deployment
 
 		require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}, &deployment))
@@ -243,13 +280,12 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 
 		t.Logf("Waiting: %+v ...", deployment.Status)
 
-		time.Sleep(5 * time.Second)
-	}
-
-	assert.NoError(t, ctx.Err())
-
-	if t.Failed() {
-		t.FailNow()
+		select {
+		case <-time.After(5 * time.Second):
+			// nothing, continue
+		case <-ctx.Done():
+			t.Fatalf("Failed to stop CAPI components: %s.", ctx.Err())
+		}
 	}
 
 	t.Log("Done stopping CAPI components.")

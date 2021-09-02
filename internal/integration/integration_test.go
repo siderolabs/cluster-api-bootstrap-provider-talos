@@ -30,82 +30,88 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-const (
-	nsName = "test"
-)
-
 func TestIntegration(t *testing.T) {
-	ctx, c := setup(t, true, nsName)
+	ctx, c := setupSuite(t)
 
-	cluster := &capiv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsName,
-			Name:      "my-cluster",
-		},
-		Spec: capiv1.ClusterSpec{
-			ClusterNetwork: &capiv1.ClusterNetwork{
-				Pods: &capiv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-				ServiceDomain: "cluster.local",
-				Services: &capiv1.NetworkRanges{
-					CIDRBlocks: []string{"10.128.0.0/12"},
+	// namespaced objects
+	var (
+		clusterName     = "test-cluster"
+		machineName     = "test-machine"
+		dataSecretName  = "test-secret"
+		talosConfigName = "test-config"
+	)
+
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+		namespaceName := setupTest(ctx, t, c)
+
+		cluster := &capiv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespaceName,
+				Name:      clusterName,
+			},
+			Spec: capiv1.ClusterSpec{
+				ClusterNetwork: &capiv1.ClusterNetwork{
+					Pods: &capiv1.NetworkRanges{
+						CIDRBlocks: []string{"192.168.0.0/16"},
+					},
+					ServiceDomain: "cluster.local",
+					Services: &capiv1.NetworkRanges{
+						CIDRBlocks: []string{"10.128.0.0/12"},
+					},
 				},
 			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, cluster))
+		}
+		require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
 
-	cluster.Status.InfrastructureReady = true
-	require.NoError(t, c.Status().Update(ctx, cluster))
+		cluster.Status.InfrastructureReady = true
+		require.NoError(t, c.Status().Update(ctx, cluster))
 
-	machineName := "my-cluster-machine"
-	dataSecretName := machineName + "-secret"
-
-	machine := &capiv1.Machine{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsName,
-			Name:      machineName,
-		},
-		Spec: capiv1.MachineSpec{
-			ClusterName: cluster.Name,
-			Bootstrap: capiv1.Bootstrap{
-				DataSecretName: &dataSecretName,
+		machine := &capiv1.Machine{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespaceName,
+				Name:      machineName,
 			},
-		},
-	}
-
-	require.NoError(t, controllerutil.SetOwnerReference(cluster, machine, scheme.Scheme))
-	require.NoError(t, c.Create(ctx, machine))
-
-	config := &bootstrapv1alpha3.TalosConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsName,
-			Name:      "test",
-		},
-		Spec: bootstrapv1alpha3.TalosConfigSpec{
-			GenerateType: "init",
-		},
-	}
-	require.NoError(t, controllerutil.SetOwnerReference(machine, config, scheme.Scheme))
-
-	err := c.Create(ctx, config)
-	require.NoError(t, err)
-
-	for ctx.Err() == nil {
-		key := types.NamespacedName{
-			Namespace: nsName,
-			Name:      "test",
+			Spec: capiv1.MachineSpec{
+				ClusterName: cluster.Name,
+				Bootstrap: capiv1.Bootstrap{
+					DataSecretName: &dataSecretName,
+				},
+			},
 		}
 
-		err = c.Get(ctx, key, config)
+		require.NoError(t, controllerutil.SetOwnerReference(cluster, machine, scheme.Scheme))
+		require.NoError(t, c.Create(ctx, machine))
+
+		config := &bootstrapv1alpha3.TalosConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespaceName,
+				Name:      talosConfigName,
+			},
+			Spec: bootstrapv1alpha3.TalosConfigSpec{
+				GenerateType: "init",
+			},
+		}
+		require.NoError(t, controllerutil.SetOwnerReference(machine, config, scheme.Scheme))
+
+		err := c.Create(ctx, config)
 		require.NoError(t, err)
 
-		if config.Status.Ready {
-			break
-		}
+		for ctx.Err() == nil {
+			key := types.NamespacedName{
+				Namespace: namespaceName,
+				Name:      talosConfigName,
+			}
 
-		t.Logf("Config: %+v", config)
-		time.Sleep(5 * time.Second)
-	}
+			err = c.Get(ctx, key, config)
+			require.NoError(t, err)
+
+			if config.Status.Ready {
+				break
+			}
+
+			t.Logf("Config: %+v", config)
+			time.Sleep(5 * time.Second)
+		}
+	})
 }

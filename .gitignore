@@ -25,4 +25,6 @@ bin
 _out/
 
 talosctl
+talosconfig
 kubeconfig
+coverage.txt

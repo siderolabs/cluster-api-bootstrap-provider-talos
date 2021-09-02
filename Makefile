@@ -110,24 +110,31 @@ clean:
 	@rm -rf $(ARTIFACTS)
 
 # Make `make test` behave just like `go test` regarding relative paths.
-test:
+test:  ## Run tests.
 	@$(MAKE) local-integration-test DEST=./internal/integration PLATFORM=linux/amd64
-	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v
+	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../coverage.txt
+
+coverage:  ## Upload coverage data to codecov.io.
+	bash -c "bash <(curl -s https://codecov.io/bash) -f coverage.txt -X fix"
 
 talosctl:
 	curl -Lo talosctl https://github.com/talos-systems/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64
 	chmod +x ./talosctl
 
-env-up: talosctl
+env-up: talosctl  ## Start development environment.
 	./talosctl cluster create \
+		--talosconfig=talosconfig \
 		--name=cabpt-env \
 		--kubernetes-version=$(K8S_VERSION) \
 		--mtu=1450 \
-		--memory=2048 \
-		--cpus=2.0 \
 		--crashdump
-	./talosctl -n 10.5.0.2 kubeconfig -f kubeconfig
+	./talosctl kubeconfig kubeconfig \
+		--talosconfig=talosconfig \
+		--nodes=10.5.0.2 \
+		--force
 
-env-down: talosctl
+env-down: talosctl ## Stop development environment.
 	./talosctl cluster destroy \
+		--talosconfig=talosconfig \
 		--name=cabpt-env
+	rm -f talosconfig kubeconfig

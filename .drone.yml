@@ -50,6 +50,7 @@ steps:
     pull: always
     environment:
       PLATFORM: linux/amd64,linux/arm64
+      INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
     commands:
       - make env-up
       - make test
@@ -57,6 +58,22 @@ steps:
       event:
         include:
           - pull_request
+    volumes:
+      - name: docker-socket
+        path: /var/run
+      - name: outerdockersock
+        path: /var/outer-run
+      - name: docker
+        path: /root/.docker/buildx
+
+  - name: coverage
+    image: autonomy/build-container:latest
+    pull: always
+    commands:
+      - make coverage
+    environment:
+      CODECOV_TOKEN:
+        from_secret: CODECOV_TOKEN
     volumes:
       - name: docker-socket
         path: /var/run
@@ -158,6 +175,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 0e8710aa7032501fcad228e01d94233a8bbe70b432c232887c4ab9d4f55a707a
+hmac: 85ad07759e326ade61ea3aceae13b64264408214343dd5c99b4c0b28a8d21641
 
 ...
