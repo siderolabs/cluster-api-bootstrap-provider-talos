@@ -49,7 +49,7 @@ steps:
     image: autonomy/build-container:latest
     pull: always
     environment:
-      PLATFORM: linux/amd64,linux/arm64
+      PLATFORM: linux/amd64
       INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
     commands:
       - make env-up
@@ -175,6 +175,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 85ad07759e326ade61ea3aceae13b64264408214343dd5c99b4c0b28a8d21641
+hmac: bad019a7e9df2a5e2e45427c1419ac8b5dacb9022d366ad81c829dc61a0ab94d
 
 ...
