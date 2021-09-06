@@ -109,6 +109,9 @@ run: install ## Run the controller locally. This is for testing purposes only.
 clean:
 	@rm -rf $(ARTIFACTS)
 
+conformance:  ## Performs policy checks against the commit and source code.
+	docker run --rm -it -v $(PWD):/src -w /src ghcr.io/talos-systems/conform:v0.1.0-alpha.23 enforce
+
 # Make `make test` behave just like `go test` regarding relative paths.
 test:  ## Run tests.
 	@$(MAKE) local-integration-test DEST=./internal/integration PLATFORM=linux/amd64
