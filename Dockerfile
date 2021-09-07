@@ -24,8 +24,10 @@ ENV GOPROXY https://proxy.golang.org
 ENV CGO_ENABLED 0
 ENV GOCACHE /.cache/go-build
 ENV GOMODCACHE /.cache/mod
-RUN --mount=type=cache,target=/.cache go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0
-RUN --mount=type=cache,target=/.cache go install k8s.io/code-generator/cmd/conversion-gen@v0.21.0
+ARG CONTROLLER_GEN_VERSION
+ARG CONVERSION_GEN_VERSION
+RUN --mount=type=cache,target=/.cache go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
+RUN --mount=type=cache,target=/.cache go install k8s.io/code-generator/cmd/conversion-gen@${CONVERSION_GEN_VERSION}
 WORKDIR /src
 COPY ./go.mod ./
 COPY ./go.sum ./

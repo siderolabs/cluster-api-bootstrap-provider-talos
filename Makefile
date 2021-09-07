@@ -8,10 +8,13 @@ NAME := cluster-api-talos-controller
 
 ARTIFACTS := _out
 
-TOOLS ?= ghcr.io/talos-systems/tools:v0.5.0
-PKGS ?= v0.5.0
-TALOS_VERSION ?= v0.12.0
+TOOLS ?= ghcr.io/talos-systems/tools:v0.7.0
+PKGS ?= v0.7.0
+TALOS_VERSION ?= v0.12.1
 K8S_VERSION ?= 1.21.4
+
+CONTROLLER_GEN_VERSION ?= v0.5.0
+CONVERSION_GEN_VERSION ?= v0.21.0
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
@@ -25,6 +28,8 @@ COMMON_ARGS += --build-arg=NAME=$(NAME)
 COMMON_ARGS += --build-arg=TAG=$(TAG)
 COMMON_ARGS += --build-arg=PKGS=$(PKGS)
 COMMON_ARGS += --build-arg=TOOLS=$(TOOLS)
+COMMON_ARGS += --build-arg=CONTROLLER_GEN_VERSION=$(CONTROLLER_GEN_VERSION)
+COMMON_ARGS += --build-arg=CONVERSION_GEN_VERSION=$(CONVERSION_GEN_VERSION)
 
 all: manifests container
 
