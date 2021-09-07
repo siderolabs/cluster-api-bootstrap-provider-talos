@@ -118,7 +118,7 @@ test:  ## Run tests.
 	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../coverage.txt
 
 coverage:  ## Upload coverage data to codecov.io.
-	bash -c "bash <(curl -s https://codecov.io/bash) -f coverage.txt -X fix"
+	/usr/local/bin/codecov -f coverage.txt -X fix
 
 talosctl:
 	curl -Lo talosctl https://github.com/talos-systems/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64

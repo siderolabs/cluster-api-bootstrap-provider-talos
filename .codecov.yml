@@ -3,12 +3,13 @@ codecov:
   require_ci_to_pass: false
 
 coverage:
+  range: 25..75
+
   status:
     project:
       default:
-        target: 15%
-        threshold: 0.5%
-        base: auto
+        target: auto
+        threshold: 1%
         if_ci_failed: success
     patch: off
 
