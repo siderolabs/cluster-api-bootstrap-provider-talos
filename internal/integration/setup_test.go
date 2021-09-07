@@ -86,6 +86,8 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 
 	stopCAPI(ctx, t, c)
 
+	waitForCAPIAvailability(ctx, t, c)
+
 	// TODO(aleksi): make one manager per test / namespace (move to setupTest)?
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{})
@@ -193,7 +195,15 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			ErrorIfPathMissing: true,
+			MaxTime:            20 * time.Second,
+			PollInterval:       time.Second,
 			CleanUpAfterUse:    !skipCleanupF,
+		},
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			// TODO paths?
+
+			MaxTime:      10 * time.Second,
+			PollInterval: time.Second,
 		},
 		ErrorIfCRDPathMissing: true,
 		UseExistingCluster:    pointer.BoolPtr(true),
@@ -239,7 +249,7 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	return res.cfg
 }
 
-// stopCAPI stops CAPI components so they don't interfere with our tests.
+// stopCAPI stops CAPI components that we don't need so they don't interfere with our tests.
 //
 // Context cancelation is honored.
 func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
@@ -248,8 +258,9 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 	t.Log("Stopping CAPI components ...")
 
 	var deployment appsv1.Deployment
+	key := client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}
 
-	require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}, &deployment))
+	require.NoError(t, c.Get(ctx, key, &deployment))
 
 	patchHelper, err := patch.NewHelper(&deployment, c)
 	require.NoError(t, err)
@@ -261,7 +272,7 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 	for {
 		var deployment appsv1.Deployment
 
-		require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "capi-system", Name: "capi-controller-manager"}, &deployment))
+		require.NoError(t, c.Get(ctx, key, &deployment))
 
 		if deployment.Status.Replicas == 0 {
 			break
@@ -278,4 +289,47 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 	}
 
 	t.Log("Done stopping CAPI components.")
+}
+
+// waitForCAPIAvailability waits for needed CAPI components availability.
+//
+// Context cancelation is honored.
+func waitForCAPIAvailability(ctx context.Context, t *testing.T, c client.Client) {
+	t.Helper()
+
+	t.Log("Waiting for CAPI availability ...")
+
+	// TODO is is not entirely clear why we need webhooks
+
+	key := client.ObjectKey{Namespace: "capi-webhook-system", Name: "capi-controller-manager"}
+
+	for {
+		var deployment appsv1.Deployment
+
+		require.NoError(t, c.Get(ctx, key, &deployment))
+
+		var available bool
+		for _, cond := range deployment.Status.Conditions {
+			if cond.Type != appsv1.DeploymentAvailable {
+				continue
+			}
+
+			available = cond.Status == corev1.ConditionTrue
+		}
+
+		if available {
+			break
+		}
+
+		t.Logf("Waiting: %+v ...", deployment.Status)
+
+		select {
+		case <-time.After(5 * time.Second):
+			// nothing, continue
+		case <-ctx.Done():
+			t.Fatalf("Failed to wait for CAPI availability: %s.", ctx.Err())
+		}
+	}
+
+	t.Log("CAPI is available.")
 }
