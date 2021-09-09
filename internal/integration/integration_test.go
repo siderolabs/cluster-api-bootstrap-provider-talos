@@ -6,16 +6,15 @@ package integration
 
 import (
 	"testing"
-	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talos-systems/talos/pkg/machinery/client"
-	clientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
-	"github.com/talos-systems/talos/pkg/machinery/config"
+	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
+	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
 	"github.com/talos-systems/talos/pkg/machinery/config/configloader"
-	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -30,76 +29,106 @@ func TestIntegration(t *testing.T) {
 		cluster := createCluster(ctx, t, c, namespaceName)
 		machine := createMachine(ctx, t, c, cluster)
 		talosConfig := createTalosConfig(ctx, t, c, machine)
+		waitForReady(ctx, t, c, talosConfig)
 
-		// wait for TalosConfig to be reconciled
-		for ctx.Err() == nil {
-			key := types.NamespacedName{
-				Namespace: namespaceName,
-				Name:      talosConfig.Name,
-			}
-
-			err := c.Get(ctx, key, talosConfig)
+		// check talosConfig
+		{
+			assert.Equal(t, machine.Name+"-bootstrap-data", pointer.GetString(talosConfig.Status.DataSecretName), "%+v", talosConfig)
+			clientConfig, err := talosclientconfig.FromString(talosConfig.Status.TalosConfig)
 			require.NoError(t, err)
-
-			if talosConfig.Status.Ready {
-				break
-			}
-
-			t.Log("Waiting ...")
-			sleepCtx(ctx, 5*time.Second)
+			creds := validateClientConfig(t, clientConfig)
+			talosCA := parsePEMCertificate(t, creds.CA)
+			_ = talosCA
+			// t.Logf("Talos CA:\n%s", spew.Sdump(talosCA))
 		}
 
-		assert.Equal(t, machine.Name+"-bootstrap-data", pointer.GetString(talosConfig.Status.DataSecretName), "%+v", talosConfig)
-
-		clientConfig, err := clientconfig.FromString(talosConfig.Status.TalosConfig)
-		require.NoError(t, err)
-		assert.Len(t, clientConfig.Contexts, 1)
-		assert.NotEmpty(t, clientConfig.Context)
-		context := clientConfig.Contexts[clientConfig.Context]
-		require.NotNil(t, context)
-
-		assert.Empty(t, context.Endpoints)
-		assert.Empty(t, context.Nodes)
-		creds, err := client.CredentialsFromConfigContext(context)
-		require.NoError(t, err)
-		assert.NotEmpty(t, creds.CA)
-
+		// get <cluster>-ca secret
 		var caSecret corev1.Secret
 		key := types.NamespacedName{
 			Namespace: namespaceName,
 			Name:      cluster.Name + "-ca",
 		}
 		require.NoError(t, c.Get(ctx, key, &caSecret))
-		assert.Len(t, caSecret.Data, 2)
-		assert.Equal(t, corev1.SecretTypeOpaque, caSecret.Type)                     // TODO why not SecretTypeTLS?
-		assert.NotEmpty(t, creds.Crt.Certificate, caSecret.Data[corev1.TLSCertKey]) // TODO decode and load
-		assert.NotEmpty(t, caSecret.Data[corev1.TLSPrivateKeyKey])
 
+		// check <cluster>-ca secret
+		{
+			assert.Len(t, caSecret.Data, 2)
+			assert.Equal(t, corev1.SecretTypeOpaque, caSecret.Type) // TODO why not SecretTypeTLS?
+			assert.NotEmpty(t, caSecret.Data[corev1.TLSCertKey])
+			assert.NotEmpty(t, caSecret.Data[corev1.TLSPrivateKeyKey])
+			kubeCA := parsePEMCertificate(t, caSecret.Data[corev1.TLSCertKey])
+			_ = kubeCA
+			// t.Logf("kubeCA:\n%s", spew.Sdump(kubeCA))
+		}
+
+		// get <cluster>-talos secret
 		var talosSecret corev1.Secret
 		key = types.NamespacedName{
 			Namespace: namespaceName,
 			Name:      cluster.Name + "-talos",
 		}
 		require.NoError(t, c.Get(ctx, key, &talosSecret))
-		assert.Len(t, talosSecret.Data, 3)
-		assert.NotEmpty(t, talosSecret.Data["certs"]) // TODO more tests
-		assert.NotEmpty(t, talosSecret.Data["kubeSecrets"])
-		assert.NotEmpty(t, talosSecret.Data["trustdInfo"])
 
+		// check <cluster>-talos secret
+		{
+			assert.Len(t, talosSecret.Data, 3)
+			assert.NotEmpty(t, talosSecret.Data["certs"])
+			assert.NotEmpty(t, talosSecret.Data["kubeSecrets"])
+			assert.NotEmpty(t, talosSecret.Data["trustdInfo"])
+		}
+
+		// get <machine>-bootstrap-data secret
 		var bootstrapDataSecret corev1.Secret
 		key = types.NamespacedName{
 			Namespace: namespaceName,
 			Name:      machine.Name + "-bootstrap-data",
 		}
 		require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret))
-		assert.Len(t, bootstrapDataSecret.Data, 1)
-		provider, err := configloader.NewFromBytes(bootstrapDataSecret.Data["value"])
-		require.NoError(t, err)
 
-		provider.(*v1alpha1.Config).ClusterConfig.ControlPlane.Endpoint.Host = "FIXME"
+		// check <machine>-bootstrap-data secret
+		var provider machineconfig.Provider
+		{
+			assert.Len(t, bootstrapDataSecret.Data, 1)
+			var err error
+			provider, err = configloader.NewFromBytes(bootstrapDataSecret.Data["value"])
+			require.NoError(t, err)
+			_, err = provider.Validate(runtimeMode{false}, machineconfig.WithStrict())
+			require.NoError(t, err)
+		}
 
-		// TODO more tests
-		_, err = provider.Validate(runtimeMode{false}, config.WithStrict())
-		require.NoError(t, err)
+		// cross-checks
+		{
+			secretsBundle := generate.NewSecretsBundleFromConfig(generate.NewClock(), provider)
+
+			var certs generate.Certs
+			require.NoError(t, yaml.Unmarshal(talosSecret.Data["certs"], &certs))
+			assert.NotEmpty(t, certs.Admin)
+			certs.Admin = nil
+			assert.Equal(t, secretsBundle.Certs, &certs)
+			assert.Equal(t, caSecret.Data[corev1.TLSCertKey], certs.K8s.Crt)
+
+			var kubeSecrets generate.Secrets
+			require.NoError(t, yaml.Unmarshal(talosSecret.Data["kubeSecrets"], &kubeSecrets))
+			assert.Equal(t, secretsBundle.Secrets, &kubeSecrets)
+
+			var trustdInfo generate.TrustdInfo
+			require.NoError(t, yaml.Unmarshal(talosSecret.Data["trustdInfo"], &trustdInfo))
+			assert.Equal(t, secretsBundle.TrustdInfo, &trustdInfo)
+		}
+
+		// create the second machine
+		machine2 := createMachine(ctx, t, c, cluster)
+		talosConfig2 := createTalosConfig(ctx, t, c, machine2)
+		waitForReady(ctx, t, c, talosConfig2)
+
+		// get <machine>-bootstrap-data secret
+		var bootstrapDataSecret2 corev1.Secret
+		key = types.NamespacedName{
+			Namespace: namespaceName,
+			Name:      machine2.Name + "-bootstrap-data",
+		}
+		require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret2))
+
+		assert.Equal(t, bootstrapDataSecret.Data, bootstrapDataSecret2.Data) // ?!
 	})
 }

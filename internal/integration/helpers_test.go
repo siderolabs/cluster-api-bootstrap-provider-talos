@@ -6,6 +6,8 @@ package integration
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"os"
@@ -16,8 +18,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talos-systems/talos/pkg/machinery/config"
+	talosclient "github.com/talos-systems/talos/pkg/machinery/client"
+	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
+	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +72,10 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 		},
 		Spec: capiv1.ClusterSpec{
 			ClusterNetwork: &capiv1.ClusterNetwork{},
+			ControlPlaneEndpoint: capiv1.APIEndpoint{
+				Host: clusterName + ".host",
+				Port: 12345,
+			},
 		},
 	}
 
@@ -134,6 +143,56 @@ func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, machi
 	return talosConfig
 }
 
+// waitForReady waits for TalosConfig to be reconciled (ready).
+func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1alpha3.TalosConfig) {
+	t.Helper()
+
+	for ctx.Err() == nil {
+		key := types.NamespacedName{
+			Namespace: talosConfig.Namespace,
+			Name:      talosConfig.Name,
+		}
+
+		err := c.Get(ctx, key, talosConfig)
+		require.NoError(t, err)
+
+		if talosConfig.Status.Ready {
+			break
+		}
+
+		t.Log("Waiting ...")
+		sleepCtx(ctx, 3*time.Second)
+	}
+}
+
+// parsePEMCertificate parses PEM-encoded x509 certificate.
+func parsePEMCertificate(t *testing.T, b []byte) *x509.Certificate {
+	block, rest := pem.Decode(b)
+	assert.Empty(t, rest)
+	require.NotEmpty(t, block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	return cert
+}
+
+// validateClientConfig validates talosctl configuration.
+func validateClientConfig(t *testing.T, config *talosclientconfig.Config) *talosclient.Credentials {
+	t.Helper()
+
+	assert.Len(t, config.Contexts, 1)
+	assert.NotEmpty(t, config.Context)
+	context := config.Contexts[config.Context]
+	require.NotNil(t, context)
+
+	assert.Empty(t, context.Endpoints)
+	assert.Empty(t, context.Nodes)
+	creds, err := talosclient.CredentialsFromConfigContext(context)
+	require.NoError(t, err)
+	assert.NotEmpty(t, creds.CA)
+
+	return creds
+}
+
 type runtimeMode struct {
 	requiresInstall bool
 }
@@ -147,4 +206,4 @@ func (m runtimeMode) RequiresInstall() bool {
 }
 
 // check interface
-var _ config.RuntimeMode = runtimeMode{}
+var _ machineconfig.RuntimeMode = runtimeMode{}
