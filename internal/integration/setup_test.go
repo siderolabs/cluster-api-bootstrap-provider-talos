@@ -6,16 +6,13 @@ package integration
 
 import (
 	"context"
-	"flag"
-	"fmt"
-	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
@@ -23,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,14 +32,6 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-var skipCleanupF bool
-
-func init() {
-	const env = "INTEGRATION_SKIP_CLEANUP"
-	def, _ := strconv.ParseBool(os.Getenv(env))
-	flag.BoolVar(&skipCleanupF, "skip-cleanup", def, fmt.Sprintf("Cleanup after tests [%s]", env))
-}
-
 // setupSuite setups the whole test suite.
 func setupSuite(t *testing.T) (context.Context, client.Client) {
 	t.Helper()
@@ -54,7 +42,7 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 
 	ctx := context.Background()
 
-	if !skipCleanupF {
+	if !skipCleanup {
 		// cancel context on first Ctrl+C, kill on second
 		var stop context.CancelFunc
 		ctx, stop = signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
@@ -113,7 +101,7 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 	t.Helper()
 
-	namespace := fmt.Sprintf("%s-%d", strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-")), time.Now().Unix())
+	namespace := generateName(t, "ns")
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -123,15 +111,14 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 	err := c.Create(ctx, ns)
 	require.NoError(t, err)
 
-	if !skipCleanupF {
+	if !skipCleanup {
 		t.Cleanup(func() {
 			opts := &client.DeleteOptions{
-				GracePeriodSeconds: pointer.Int64Ptr(0),
+				GracePeriodSeconds: pointer.ToInt64(0),
 			}
 
 			t.Logf("Deleting namespace %q ...", namespace)
 			assert.NoError(t, c.Delete(context.Background(), ns, opts)) // not ctx because it can be already canceled
-			t.Logf("Namespace %q deleted.", namespace)
 		})
 	}
 
@@ -197,7 +184,7 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 			ErrorIfPathMissing: true,
 			MaxTime:            20 * time.Second,
 			PollInterval:       time.Second,
-			CleanUpAfterUse:    !skipCleanupF,
+			CleanUpAfterUse:    !skipCleanup,
 		},
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			// TODO paths?
@@ -206,7 +193,7 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 			PollInterval: time.Second,
 		},
 		ErrorIfCRDPathMissing: true,
-		UseExistingCluster:    pointer.BoolPtr(true),
+		UseExistingCluster:    pointer.ToBool(true),
 	}
 
 	// Run Start in the goroutine to handle context cancelation.
@@ -217,7 +204,7 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	}
 	startErr := make(chan result, 1)
 	go func() {
-		if !skipCleanupF {
+		if !skipCleanup {
 			t.Cleanup(func() {
 				t.Log("Stopping test-env ...")
 
@@ -265,7 +252,7 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 	patchHelper, err := patch.NewHelper(&deployment, c)
 	require.NoError(t, err)
 
-	deployment.Spec.Replicas = pointer.Int32Ptr(0)
+	deployment.Spec.Replicas = pointer.ToInt32(0)
 
 	require.NoError(t, patchHelper.Patch(ctx, &deployment))
 
@@ -279,11 +266,8 @@ func stopCAPI(ctx context.Context, t *testing.T, c client.Client) {
 		}
 
 		t.Logf("Waiting: %+v ...", deployment.Status)
-
-		select {
-		case <-time.After(5 * time.Second):
-			// nothing, continue
-		case <-ctx.Done():
+		sleepCtx(ctx, 5*time.Second)
+		if ctx.Err() != nil {
 			t.Fatalf("Failed to stop CAPI components: %s.", ctx.Err())
 		}
 	}
@@ -322,11 +306,8 @@ func waitForCAPIAvailability(ctx context.Context, t *testing.T, c client.Client)
 		}
 
 		t.Logf("Waiting: %+v ...", deployment.Status)
-
-		select {
-		case <-time.After(5 * time.Second):
-			// nothing, continue
-		case <-ctx.Done():
+		sleepCtx(ctx, 5*time.Second)
+		if ctx.Err() != nil {
 			t.Fatalf("Failed to wait for CAPI availability: %s.", ctx.Err())
 		}
 	}

@@ -3,6 +3,7 @@ module github.com/talos-systems/cluster-api-bootstrap-provider-talos
 go 1.16
 
 require (
+	github.com/AlekSi/pointer v1.1.0
 	github.com/evanphx/json-patch v4.11.0+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/spf13/pflag v1.0.5

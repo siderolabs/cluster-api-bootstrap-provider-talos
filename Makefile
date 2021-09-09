@@ -135,6 +135,7 @@ env-up: talosctl  ## Start development environment.
 		--name=cabpt-env \
 		--kubernetes-version=$(K8S_VERSION) \
 		--mtu=1450 \
+		--skip-kubeconfig \
 		--crashdump
 	./talosctl kubeconfig kubeconfig \
 		--talosconfig=talosconfig \

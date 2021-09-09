@@ -8,99 +8,98 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/talos-systems/talos/pkg/machinery/client"
+	clientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
+	"github.com/talos-systems/talos/pkg/machinery/config"
+	"github.com/talos-systems/talos/pkg/machinery/config/configloader"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	// +kubebuilder:scaffold:imports
 )
 
 func TestIntegration(t *testing.T) {
 	ctx, c := setupSuite(t)
 
-	// namespaced objects
-	var (
-		clusterName     = "test-cluster"
-		machineName     = "test-machine"
-		dataSecretName  = "test-secret"
-		talosConfigName = "test-config"
-	)
-
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
+
 		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName)
+		machine := createMachine(ctx, t, c, cluster)
+		talosConfig := createTalosConfig(ctx, t, c, machine)
 
-		cluster := &capiv1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespaceName,
-				Name:      clusterName,
-			},
-			Spec: capiv1.ClusterSpec{
-				ClusterNetwork: &capiv1.ClusterNetwork{
-					Pods: &capiv1.NetworkRanges{
-						CIDRBlocks: []string{"192.168.0.0/16"},
-					},
-					ServiceDomain: "cluster.local",
-					Services: &capiv1.NetworkRanges{
-						CIDRBlocks: []string{"10.128.0.0/12"},
-					},
-				},
-			},
-		}
-		require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
-
-		cluster.Status.InfrastructureReady = true
-		require.NoError(t, c.Status().Update(ctx, cluster))
-
-		machine := &capiv1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespaceName,
-				Name:      machineName,
-			},
-			Spec: capiv1.MachineSpec{
-				ClusterName: cluster.Name,
-				Bootstrap: capiv1.Bootstrap{
-					DataSecretName: &dataSecretName,
-				},
-			},
-		}
-
-		require.NoError(t, controllerutil.SetOwnerReference(cluster, machine, scheme.Scheme))
-		require.NoError(t, c.Create(ctx, machine))
-
-		config := &bootstrapv1alpha3.TalosConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespaceName,
-				Name:      talosConfigName,
-			},
-			Spec: bootstrapv1alpha3.TalosConfigSpec{
-				GenerateType: "init",
-			},
-		}
-		require.NoError(t, controllerutil.SetOwnerReference(machine, config, scheme.Scheme))
-
-		err := c.Create(ctx, config)
-		require.NoError(t, err)
-
+		// wait for TalosConfig to be reconciled
 		for ctx.Err() == nil {
 			key := types.NamespacedName{
 				Namespace: namespaceName,
-				Name:      talosConfigName,
+				Name:      talosConfig.Name,
 			}
 
-			err = c.Get(ctx, key, config)
+			err := c.Get(ctx, key, talosConfig)
 			require.NoError(t, err)
 
-			if config.Status.Ready {
+			if talosConfig.Status.Ready {
 				break
 			}
 
-			t.Logf("Config: %+v", config)
-			time.Sleep(5 * time.Second)
+			t.Log("Waiting ...")
+			sleepCtx(ctx, 5*time.Second)
 		}
+
+		assert.Equal(t, machine.Name+"-bootstrap-data", pointer.GetString(talosConfig.Status.DataSecretName), "%+v", talosConfig)
+
+		clientConfig, err := clientconfig.FromString(talosConfig.Status.TalosConfig)
+		require.NoError(t, err)
+		assert.Len(t, clientConfig.Contexts, 1)
+		assert.NotEmpty(t, clientConfig.Context)
+		context := clientConfig.Contexts[clientConfig.Context]
+		require.NotNil(t, context)
+
+		assert.Empty(t, context.Endpoints)
+		assert.Empty(t, context.Nodes)
+		creds, err := client.CredentialsFromConfigContext(context)
+		require.NoError(t, err)
+		assert.NotEmpty(t, creds.CA)
+
+		var caSecret corev1.Secret
+		key := types.NamespacedName{
+			Namespace: namespaceName,
+			Name:      cluster.Name + "-ca",
+		}
+		require.NoError(t, c.Get(ctx, key, &caSecret))
+		assert.Len(t, caSecret.Data, 2)
+		assert.Equal(t, corev1.SecretTypeOpaque, caSecret.Type)                     // TODO why not SecretTypeTLS?
+		assert.NotEmpty(t, creds.Crt.Certificate, caSecret.Data[corev1.TLSCertKey]) // TODO decode and load
+		assert.NotEmpty(t, caSecret.Data[corev1.TLSPrivateKeyKey])
+
+		var talosSecret corev1.Secret
+		key = types.NamespacedName{
+			Namespace: namespaceName,
+			Name:      cluster.Name + "-talos",
+		}
+		require.NoError(t, c.Get(ctx, key, &talosSecret))
+		assert.Len(t, talosSecret.Data, 3)
+		assert.NotEmpty(t, talosSecret.Data["certs"]) // TODO more tests
+		assert.NotEmpty(t, talosSecret.Data["kubeSecrets"])
+		assert.NotEmpty(t, talosSecret.Data["trustdInfo"])
+
+		var bootstrapDataSecret corev1.Secret
+		key = types.NamespacedName{
+			Namespace: namespaceName,
+			Name:      machine.Name + "-bootstrap-data",
+		}
+		require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret))
+		assert.Len(t, bootstrapDataSecret.Data, 1)
+		provider, err := configloader.NewFromBytes(bootstrapDataSecret.Data["value"])
+		require.NoError(t, err)
+
+		provider.(*v1alpha1.Config).ClusterConfig.ControlPlane.Endpoint.Host = "FIXME"
+
+		// TODO more tests
+		_, err = provider.Validate(runtimeMode{false}, config.WithStrict())
+		require.NoError(t, err)
 	})
 }
