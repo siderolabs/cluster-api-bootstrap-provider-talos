@@ -19,11 +19,10 @@ import (
 	"github.com/talos-systems/talos/pkg/machinery/config/configpatcher"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
-	configmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"github.com/talos-systems/talos/pkg/machinery/constants"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
@@ -48,7 +47,7 @@ const (
 )
 
 var (
-	defaultVersionContract = config.TalosVersion0_8
+	defaultVersionContract = config.TalosVersionCurrent
 )
 
 // TalosConfigReconciler reconciles a TalosConfig object
@@ -206,9 +205,11 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 
 	var retData *TalosConfigBundle
 
-	switch config.Spec.GenerateType {
+	machineType, _ := machine.ParseType(config.Spec.GenerateType) //nolint:errcheck // handle errors later
+
+	switch {
 	// Slurp and use user-supplied configs
-	case "none":
+	case config.Spec.GenerateType == "none":
 		if config.Spec.Data == "" {
 			return ctrl.Result{}, errors.New("failed to specify config data with none generate type")
 		}
@@ -218,14 +219,14 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		}
 
 	// Generate configs on the fly
-	case "init", "controlplane", "join":
+	case machineType != machine.TypeUnknown:
 		retData, err = r.genConfigs(ctx, tcScope)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 	default:
-		return ctrl.Result{}, errors.New("unknown generate type specified")
+		return ctrl.Result{}, fmt.Errorf("unknown generate type specified: %q", config.Spec.GenerateType)
 	}
 
 	// Handle patches to the machine config if they were specified
@@ -319,11 +320,8 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 	}
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
-	if userConfig.Machine().Type() == configmachine.TypeInit {
-		err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA())
-		if err != nil {
-			return retBundle, err
-		}
+	if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA()); err != nil {
+		return retBundle, err
 	}
 
 	userConfigStr, err := userConfig.String()
@@ -341,12 +339,9 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	retBundle := &TalosConfigBundle{}
 
 	// Determine what type of node this is
-	machineType := configmachine.TypeJoin
-	switch scope.Config.Spec.GenerateType {
-	case "init":
-		machineType = configmachine.TypeInit
-	case "controlplane":
-		machineType = configmachine.TypeControlPlane
+	machineType, err := machine.ParseType(scope.Config.Spec.GenerateType)
+	if err != nil {
+		machineType = machine.TypeWorker
 	}
 
 	// Allow user to override default kube version.
@@ -391,12 +386,13 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions = append(genOptions, generate.WithVersionContract(versionContract))
 
-	secretBundle, err := generate.NewSecretsBundle(generate.NewClock(), genOptions...)
+	secretBundle, err := r.getSecretsBundle(ctx, scope, scope.Cluster.Name+"-talos", genOptions...)
 	if err != nil {
 		return retBundle, err
 	}
 
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
+
 	input, err := generate.NewInput(
 		scope.Cluster.Name,
 		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
@@ -408,50 +404,10 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, err
 	}
 
-	// Stash our generated input secrets so that we can reuse them for other nodes
-	inputSecret, err := r.fetchSecret(ctx, scope.Config, scope.Cluster.Name+"-talos")
-	if machineType == configmachine.TypeInit && k8serrors.IsNotFound(err) {
-		inputSecret, err = r.writeInputSecret(ctx, scope, input)
-		if err != nil {
-			return retBundle, err
-		}
-	} else if err != nil {
-		return retBundle, err
-	}
-
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
-	_, err = r.fetchSecret(ctx, scope.Config, scope.Cluster.Name+"-ca")
-	if machineType == configmachine.TypeInit && k8serrors.IsNotFound(err) {
-		err = r.writeK8sCASecret(ctx, scope, input.Certs.K8s)
-		if err != nil {
-			return retBundle, err
-		}
-	} else if err != nil {
+	if err = r.writeK8sCASecret(ctx, scope, input.Certs.K8s); err != nil {
 		return retBundle, err
 	}
-
-	certs := &generate.Certs{}
-	kubeSecrets := &generate.Secrets{}
-	trustdInfo := &generate.TrustdInfo{}
-
-	err = yaml.Unmarshal(inputSecret.Data["certs"], certs)
-	if err != nil {
-		return retBundle, err
-	}
-
-	err = yaml.Unmarshal(inputSecret.Data["kubeSecrets"], kubeSecrets)
-	if err != nil {
-		return retBundle, err
-	}
-
-	err = yaml.Unmarshal(inputSecret.Data["trustdInfo"], trustdInfo)
-	if err != nil {
-		return retBundle, err
-	}
-
-	input.Certs = certs
-	input.Secrets = kubeSecrets
-	input.TrustdInfo = trustdInfo
 
 	tcString, err := genTalosConfigFile(input.ClusterName, input.Certs)
 	if err != nil {

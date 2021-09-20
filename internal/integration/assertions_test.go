@@ -82,27 +82,16 @@ func assertControllerSecret(ctx context.Context, t *testing.T, c client.Client, 
 	}
 	require.NoError(t, c.Get(ctx, key, &talosSecret))
 
-	assert.Len(t, talosSecret.Data, 3)
-	assert.NotEmpty(t, talosSecret.Data["certs"])
-	assert.NotEmpty(t, talosSecret.Data["kubeSecrets"])
-	assert.NotEmpty(t, talosSecret.Data["trustdInfo"])
+	assert.Len(t, talosSecret.Data, 1)
+	assert.NotEmpty(t, talosSecret.Data["bundle"])
 
 	// cross-checks
 	secretsBundle := generate.NewSecretsBundleFromConfig(generate.NewClock(), provider)
+	secretsBundle.Clock = nil
 
-	var certs generate.Certs
-	require.NoError(t, yaml.Unmarshal(talosSecret.Data["certs"], &certs))
-	assert.NotEmpty(t, certs.Admin)
-	certs.Admin = nil
-	assert.Equal(t, secretsBundle.Certs, &certs)
-
-	var kubeSecrets generate.Secrets
-	require.NoError(t, yaml.Unmarshal(talosSecret.Data["kubeSecrets"], &kubeSecrets))
-	assert.Equal(t, secretsBundle.Secrets, &kubeSecrets)
-
-	var trustdInfo generate.TrustdInfo
-	require.NoError(t, yaml.Unmarshal(talosSecret.Data["trustdInfo"], &trustdInfo))
-	assert.Equal(t, secretsBundle.TrustdInfo, &trustdInfo)
+	var savedBundle generate.SecretsBundle
+	require.NoError(t, yaml.Unmarshal(talosSecret.Data["bundle"], &savedBundle))
+	assert.Equal(t, *secretsBundle, savedBundle)
 }
 
 // assertSameMachineConfigSecrets checks that control plane configs share same set of secrets.
@@ -130,8 +119,8 @@ func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.
 
 	checks := []func(p machineconfig.Provider) interface{}{
 		func(p machineconfig.Provider) interface{} { return p.Machine().Security().Token() },
-		// TODO: uncomment me with Talos 0.12: func(p machineconfig.Provider) interface{} { return p.Cluster().ID() },
-		// TODO: uncomment me with Talos 0.12: func(p machineconfig.Provider) interface{} { return p.Cluster().Secret() },
+		func(p machineconfig.Provider) interface{} { return p.Cluster().ID() },
+		func(p machineconfig.Provider) interface{} { return p.Cluster().Secret() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Endpoint().String() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().ID() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().Secret() },

@@ -8,15 +8,14 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/talos-systems/crypto v0.3.1
-	github.com/talos-systems/talos/pkg/machinery v0.11.3
-	golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71
+	github.com/talos-systems/crypto v0.3.2
+	github.com/talos-systems/talos/pkg/machinery v0.12.3-0.20210920195258-7e63e43eb399
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.17.9
 	k8s.io/apiextensions-apiserver v0.17.9
 	k8s.io/apimachinery v0.17.9
 	k8s.io/client-go v0.17.9
-	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	sigs.k8s.io/cluster-api v0.3.22
 	sigs.k8s.io/controller-runtime v0.5.14
 )
@@ -28,7 +27,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/containerd/go-cni v1.0.2 // indirect
 	github.com/containernetworking/cni v0.8.1 // indirect
-	github.com/cosi-project/runtime v0.0.0-20210625174835-93ead370bf57 // indirect
+	github.com/cosi-project/runtime v0.0.0-20210707150857-25f235cd0682 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/drone/envsubst v1.0.3-0.20200709223903-efdb65b94e5a // indirect
@@ -79,11 +78,11 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/viper v1.6.2 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	github.com/talos-systems/go-blockdevice v0.2.1 // indirect
+	github.com/talos-systems/go-blockdevice v0.2.3 // indirect
 	github.com/talos-systems/net v0.3.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.16.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.18.1 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
@@ -91,9 +90,9 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/genproto v0.0.0-20210617175327-b9e0b3197ced // indirect
-	google.golang.org/grpc v1.38.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	google.golang.org/genproto v0.0.0-20210722135532-667f2b7c528f // indirect
+	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.51.0 // indirect
@@ -104,5 +103,6 @@ require (
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.0.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // indirect
+	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )

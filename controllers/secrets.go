@@ -34,27 +34,74 @@ func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstr
 	return retSecret, nil
 }
 
-func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *TalosConfigScope, input *generate.Input) (*corev1.Secret, error) {
+// getSecretsBundle either generates or loads existing secret.
+func (r *TalosConfigReconciler) getSecretsBundle(ctx context.Context, scope *TalosConfigScope, secretName string, opts ...generate.GenOption) (*generate.SecretsBundle, error) {
+	var secretsBundle *generate.SecretsBundle
 
-	certMarshal, err := yaml.Marshal(input.Certs)
-	if err != nil {
-		return nil, err
+retry:
+	secret, err := r.fetchSecret(ctx, scope.Config, secretName)
+
+	switch {
+	case err != nil && k8serrors.IsNotFound(err):
+		// no cluster secret yet, generate new one
+		secretsBundle, err = generate.NewSecretsBundle(generate.NewClock(), opts...)
+		if err != nil {
+			return nil, fmt.Errorf("error generating new secrets bundle: %w", err)
+		}
+
+		if err = r.writeSecretsBundleSecret(ctx, scope, secretName, secretsBundle); err != nil {
+			if k8serrors.IsAlreadyExists(err) {
+				// conflict on creation, retry loading
+				goto retry
+			}
+
+			return nil, fmt.Errorf("error writing secrets bundle: %w", err)
+		}
+	case err != nil:
+		return nil, fmt.Errorf("error reading secrets bundle: %w", err)
+	default:
+		// successfully loaded secret, initialize secretsBundle from it
+		secretsBundle = &generate.SecretsBundle{
+			Clock: generate.NewClock(),
+		}
+
+		if _, ok := secret.Data["bundle"]; ok {
+			// new format
+			if err = yaml.Unmarshal(secret.Data["bundle"], secretsBundle); err != nil {
+				return nil, fmt.Errorf("error unmarshaling secrets bundle: %w", err)
+			}
+		} else {
+			// legacy format
+			if err = yaml.Unmarshal(secret.Data["certs"], &secretsBundle.Certs); err != nil {
+				return nil, fmt.Errorf("error unmarshaling certs: %w", err)
+			}
+
+			if err = yaml.Unmarshal(secret.Data["kubeSecrets"], &secretsBundle.Secrets); err != nil {
+				return nil, fmt.Errorf("error unmarshaling secrets: %w", err)
+			}
+
+			if err = yaml.Unmarshal(secret.Data["trustdInfo"], &secretsBundle.TrustdInfo); err != nil {
+				return nil, fmt.Errorf("error unmarshaling trustd info: %w", err)
+			}
+
+			// not stored in legacy format, use empty values
+			secretsBundle.Cluster = &generate.Cluster{}
+		}
 	}
 
-	kubeSecretsMarshal, err := yaml.Marshal(input.Secrets)
+	return secretsBundle, nil
+}
+
+func (r *TalosConfigReconciler) writeSecretsBundleSecret(ctx context.Context, scope *TalosConfigScope, secretName string, secretsBundle *generate.SecretsBundle) error {
+	bundle, err := yaml.Marshal(secretsBundle)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error marshaling secrets bundle: %w", err)
 	}
 
-	trustdInfoMarshal, err := yaml.Marshal(input.TrustdInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	certSecret := &corev1.Secret{
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: scope.Config.Namespace,
-			Name:      scope.Cluster.Name + "-talos",
+			Name:      secretName,
 			Labels: map[string]string{
 				capiv1.ClusterLabelName: scope.Cluster.Name,
 			},
@@ -63,45 +110,43 @@ func (r *TalosConfigReconciler) writeInputSecret(ctx context.Context, scope *Tal
 			},
 		},
 		Data: map[string][]byte{
-			"certs":       certMarshal,
-			"kubeSecrets": kubeSecretsMarshal,
-			"trustdInfo":  trustdInfoMarshal,
+			"bundle": bundle,
 		},
 	}
 
-	err = r.Client.Create(ctx, certSecret)
-	if err != nil {
-		return nil, err
-	}
-	return certSecret, nil
+	return r.Client.Create(ctx, secret)
 }
 
 func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *TalosConfigScope, certs *x509.PEMEncodedCertificateAndKey) error {
 	// Create ca secret only if it doesn't already exist
 	_, err := r.fetchSecret(ctx, scope.Config, scope.Cluster.Name+"-ca")
-	if k8serrors.IsNotFound(err) {
-		certSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: scope.Config.Namespace,
-				Name:      scope.Cluster.Name + "-ca",
-				Labels: map[string]string{
-					capiv1.ClusterLabelName: scope.Cluster.Name,
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
-				},
-			},
-			Data: map[string][]byte{
-				"tls.crt": certs.Crt,
-				"tls.key": certs.Key,
-			},
-		}
+	if err == nil {
+		return nil
+	}
 
-		err = r.Client.Create(ctx, certSecret)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
+	if !k8serrors.IsNotFound(err) {
+		return err
+	}
+
+	certSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: scope.Config.Namespace,
+			Name:      scope.Cluster.Name + "-ca",
+			Labels: map[string]string{
+				capiv1.ClusterLabelName: scope.Cluster.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
+			},
+		},
+		Data: map[string][]byte{
+			"tls.crt": certs.Crt,
+			"tls.key": certs.Key,
+		},
+	}
+
+	err = r.Client.Create(ctx, certSecret)
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return err
 	}
 
