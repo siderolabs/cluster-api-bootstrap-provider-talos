@@ -18,7 +18,9 @@ import (
 	"golang.org/x/sys/unix"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -119,6 +121,26 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 
 			t.Logf("Deleting namespace %q ...", namespace)
 			assert.NoError(t, c.Delete(context.Background(), ns, opts)) // not ctx because it can be already canceled
+
+			for {
+				var obj corev1.Namespace
+
+				err = c.Get(context.Background(), types.NamespacedName{Name: namespace}, &obj)
+				if err == nil {
+					t.Log("Waiting for ns deletion", namespace)
+
+					time.Sleep(time.Second)
+
+					continue
+				}
+
+				if !apierrors.IsNotFound(err) {
+					t.Log("error waiting for namespace deletion", err)
+				}
+
+				break
+
+			}
 		})
 	}
 

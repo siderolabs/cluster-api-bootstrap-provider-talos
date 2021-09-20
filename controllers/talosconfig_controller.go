@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
@@ -145,25 +144,6 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	// Look up the resource that owns this talosconfig if there is one
-	owner, err := bsutil.GetConfigOwner(ctx, r.Client, config)
-	if err != nil {
-		log.Error(err, "could not get owner resource")
-		return ctrl.Result{}, err
-	}
-	if owner == nil {
-		log.Info("Waiting for OwnerRef on the talosconfig")
-		return ctrl.Result{}, errors.New("no owner ref")
-	}
-	log = log.WithName(fmt.Sprintf("owner-name=%s", owner.GetName()))
-
-	// Lookup the cluster the machine is associated with
-	cluster, err := util.GetClusterByName(ctx, r.Client, owner.GetNamespace(), owner.ClusterName())
-	if err != nil {
-		log.Error(err, "could not get cluster by machine metadata")
-		return ctrl.Result{}, err
-	}
-
 	// Initialize the patch helper
 	patchHelper, err := patch.NewHelper(config, r.Client)
 	if err != nil {
@@ -185,6 +165,25 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 	// Handle deleted machines
 	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, config)
+	}
+
+	// Look up the resource that owns this talosconfig if there is one
+	owner, err := bsutil.GetConfigOwner(ctx, r.Client, config)
+	if err != nil {
+		log.Error(err, "could not get owner resource")
+		return ctrl.Result{}, err
+	}
+	if owner == nil {
+		log.Info("Waiting for OwnerRef on the talosconfig")
+		return ctrl.Result{}, errors.New("no owner ref")
+	}
+	log = log.WithName(fmt.Sprintf("owner-name=%s", owner.GetName()))
+
+	// Lookup the cluster the machine is associated with
+	cluster, err := util.GetClusterByName(ctx, r.Client, owner.GetNamespace(), owner.ClusterName())
+	if err != nil {
+		log.Error(err, "could not get cluster by machine metadata")
+		return ctrl.Result{}, err
 	}
 
 	// bail super early if it's already ready
@@ -275,7 +274,7 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, err
 	}
 
-	config.Status.DataSecretName = pointer.StringPtr(tcScope.ConfigOwner.GetName() + "-bootstrap-data")
+	config.Status.DataSecretName = tcScope.ConfigOwner.DataSecretName()
 	config.Status.TalosConfig = retData.TalosConfig
 	config.Status.Ready = true
 

@@ -54,7 +54,8 @@ COPY --from=generate-build /src/api /api
 
 FROM build AS integration-test-build
 ENV CGO_ENABLED 1
-ARG GO_LDFLAGS="-linkmode=external -extldflags '-static'"
+ARG TALOS_VERSION
+ARG GO_LDFLAGS="-linkmode=external -extldflags '-static' -X github.com/talos-systems/cluster-api-bootstrap-provider-talos/internal/integration.TalosVersion=${TALOS_VERSION}"
 RUN --mount=type=cache,target=/.cache go test -race -ldflags "${GO_LDFLAGS}" -coverpkg=./... -v -c ./internal/integration
 
 FROM scratch AS integration-test

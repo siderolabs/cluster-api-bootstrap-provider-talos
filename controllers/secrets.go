@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/talos-systems/crypto/x509"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
@@ -112,14 +113,18 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 	// Create ca secret only if it doesn't already exist
 	ownerName := scope.ConfigOwner.GetName()
 
+	if scope.ConfigOwner.DataSecretName() == nil {
+		return fmt.Errorf("config owner data secret name is nil")
+	}
+
 	r.Log.Info("handling bootstrap data for ", "owner", ownerName)
 
-	_, err := r.fetchSecret(ctx, scope.Config, ownerName+"-bootstrap-data")
+	_, err := r.fetchSecret(ctx, scope.Config, *scope.ConfigOwner.DataSecretName())
 	if k8serrors.IsNotFound(err) {
 		certSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: scope.Config.Namespace,
-				Name:      ownerName + "-bootstrap-data",
+				Name:      *scope.ConfigOwner.DataSecretName(),
 				Labels: map[string]string{
 					capiv1.ClusterLabelName: scope.Cluster.Name,
 				},

@@ -6,8 +6,6 @@ package integration
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
 	"flag"
 	"fmt"
 	"os"
@@ -16,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	talosclient "github.com/talos-systems/talos/pkg/machinery/client"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -61,22 +61,27 @@ func generateName(t *testing.T, kind string) string {
 }
 
 // createCluster creates a Cluster with "ready" infrastructure.
-func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string) *capiv1.Cluster {
+func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec *capiv1.ClusterSpec) *capiv1.Cluster {
 	t.Helper()
 
 	clusterName := generateName(t, "cluster")
-	cluster := &capiv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespaceName,
-			Name:      clusterName,
-		},
-		Spec: capiv1.ClusterSpec{
+
+	if spec == nil {
+		spec = &capiv1.ClusterSpec{
 			ClusterNetwork: &capiv1.ClusterNetwork{},
 			ControlPlaneEndpoint: capiv1.APIEndpoint{
 				Host: clusterName + ".host",
 				Port: 12345,
 			},
+		}
+	}
+
+	cluster := &capiv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespaceName,
+			Name:      clusterName,
 		},
+		Spec: *spec,
 	}
 
 	require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
@@ -92,7 +97,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 	t.Helper()
 
 	machineName := generateName(t, "machine")
-	dataSecretName := "my-test-secret"
+	dataSecretName := fmt.Sprintf("%s-bootstrap-data", machineName)
 	machine := &capiv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cluster.Namespace,
@@ -101,7 +106,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
 			Bootstrap: capiv1.Bootstrap{
-				DataSecretName: &dataSecretName, // TODO
+				DataSecretName: pointer.ToString(dataSecretName),
 			},
 		},
 	}
@@ -114,7 +119,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 }
 
 // createTalosConfig creates a TalosConfig owned by the Machine.
-func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, machine *capiv1.Machine) *bootstrapv1alpha3.TalosConfig {
+func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, machine *capiv1.Machine, spec bootstrapv1alpha3.TalosConfigSpec) *bootstrapv1alpha3.TalosConfig {
 	t.Helper()
 
 	talosConfigName := generateName(t, "talosconfig")
@@ -123,9 +128,7 @@ func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, machi
 			Namespace: machine.Namespace,
 			Name:      talosConfigName,
 		},
-		Spec: bootstrapv1alpha3.TalosConfigSpec{
-			GenerateType: "init",
-		},
+		Spec: spec,
 	}
 
 	require.NoError(t, controllerutil.SetOwnerReference(machine, talosConfig, scheme.Scheme))
@@ -163,16 +166,12 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		t.Log("Waiting ...")
 		sleepCtx(ctx, 3*time.Second)
 	}
-}
 
-// parsePEMCertificate parses PEM-encoded x509 certificate.
-func parsePEMCertificate(t *testing.T, b []byte) *x509.Certificate {
-	block, rest := pem.Decode(b)
-	assert.Empty(t, rest)
-	require.NotEmpty(t, block.Bytes)
-	cert, err := x509.ParseCertificate(block.Bytes)
+	owner, err := bsutil.GetConfigOwner(ctx, c, talosConfig)
 	require.NoError(t, err)
-	return cert
+
+	assert.Equal(t, pointer.GetString(owner.DataSecretName()), pointer.GetString(talosConfig.Status.DataSecretName), "%+v", talosConfig)
+
 }
 
 // validateClientConfig validates talosctl configuration.
