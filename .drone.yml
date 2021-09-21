@@ -133,6 +133,7 @@ steps:
       draft: true
       files:
         - _out/*
+      note: _out/RELEASE_NOTES.md
     when:
       event:
         - tag
@@ -175,6 +176,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: bad019a7e9df2a5e2e45427c1419ac8b5dacb9022d366ad81c829dc61a0ab94d
+hmac: 523acbd6b6e92b11249b0515fe28ef34dc1c3c926826e84ce9a1de3412a6a65e
 
 ...

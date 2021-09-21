@@ -86,8 +86,13 @@ container: generate ## Build the container image.
 manifests: ## Generate manifests (e.g. CRD, RBAC, etc.).
 	@$(MAKE) local-$@ DEST=./ PLATFORM=linux/amd64
 
+.PHONY: release-notes
+release-notes: ## Create the release notes.
+	@mkdir -p $(ARTIFACTS)
+	ARTIFACTS=$(ARTIFACTS) ./hack/release.sh $@ $(ARTIFACTS)/RELEASE_NOTES.md $(TAG)
+
 .PHONY: release
-release: manifests container ## Create the release YAML. The build result will be ouput to the specified local destination.
+release: manifests container release-notes ## Create the release YAML. The build result will be ouput to the specified local destination.
 	@$(MAKE) local-$@ DEST=./$(ARTIFACTS) PLATFORM=linux/amd64
 
 .PHONY: deploy
