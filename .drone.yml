@@ -133,6 +133,7 @@ steps:
       draft: true
       files:
         - _out/*
+      note: _out/RELEASE_NOTES.md
     when:
       event:
         - tag
