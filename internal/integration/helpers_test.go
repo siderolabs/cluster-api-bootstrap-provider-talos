@@ -14,17 +14,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	talosclient "github.com/talos-systems/talos/pkg/machinery/client"
 	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
 	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -97,7 +96,6 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 	t.Helper()
 
 	machineName := generateName(t, "machine")
-	dataSecretName := fmt.Sprintf("%s-bootstrap-data", machineName)
 	machine := &capiv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cluster.Namespace,
@@ -106,7 +104,10 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
 			Bootstrap: capiv1.Bootstrap{
-				DataSecretName: pointer.ToString(dataSecretName),
+				ConfigRef: &corev1.ObjectReference{
+					Kind:       "TalosConfig",
+					APIVersion: bootstrapv1alpha3.GroupVersion.String(),
+				},
 			},
 		},
 	}
@@ -166,12 +167,6 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		t.Log("Waiting ...")
 		sleepCtx(ctx, 3*time.Second)
 	}
-
-	owner, err := bsutil.GetConfigOwner(ctx, c, talosConfig)
-	require.NoError(t, err)
-
-	assert.Equal(t, pointer.GetString(owner.DataSecretName()), pointer.GetString(talosConfig.Status.DataSecretName), "%+v", talosConfig)
-
 }
 
 // validateClientConfig validates talosctl configuration.

@@ -154,41 +154,39 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 }
 
 // writeBootstrapData creates a new secret with the data passed in as input
-func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *TalosConfigScope, data []byte) error {
-	// Create ca secret only if it doesn't already exist
+func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *TalosConfigScope, data []byte) (string, error) {
+	// Create bootstrap secret only if it doesn't already exist
 	ownerName := scope.ConfigOwner.GetName()
-
-	if scope.ConfigOwner.DataSecretName() == nil {
-		return fmt.Errorf("config owner data secret name is nil")
-	}
+	dataSecretName := ownerName + "-bootstrap-data"
 
 	r.Log.Info("handling bootstrap data for ", "owner", ownerName)
 
-	_, err := r.fetchSecret(ctx, scope.Config, *scope.ConfigOwner.DataSecretName())
-	if k8serrors.IsNotFound(err) {
-		certSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: scope.Config.Namespace,
-				Name:      *scope.ConfigOwner.DataSecretName(),
-				Labels: map[string]string{
-					capiv1.ClusterLabelName: scope.Cluster.Name,
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
-				},
-			},
-			Data: map[string][]byte{
-				"value": data,
-			},
-		}
-
-		err = r.Client.Create(ctx, certSecret)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
+	_, err := r.fetchSecret(ctx, scope.Config, dataSecretName)
+	if err == nil {
+		return dataSecretName, nil
 	}
 
-	return nil
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return dataSecretName, err
+	}
+
+	certSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: scope.Config.Namespace,
+			Name:      dataSecretName,
+			Labels: map[string]string{
+				capiv1.ClusterLabelName: scope.Cluster.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
+			},
+		},
+		Data: map[string][]byte{
+			"value": data,
+		},
+	}
+
+	err = r.Client.Create(ctx, certSecret)
+
+	return dataSecretName, err
 }

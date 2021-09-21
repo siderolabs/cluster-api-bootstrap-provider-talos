@@ -197,6 +197,15 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		return ctrl.Result{}, errors.New("infra not ready")
 	}
 
+	// Reconcile status for machines that already have a secret reference, but our status isn't up to date.
+	// This case solves the pivoting scenario (or a backup restore) which doesn't preserve the status subresource on objects.
+	if owner.DataSecretName() != nil && (!config.Status.Ready || config.Status.DataSecretName == nil) {
+		config.Status.Ready = true
+		config.Status.DataSecretName = owner.DataSecretName()
+
+		return ctrl.Result{}, nil
+	}
+
 	tcScope := &TalosConfigScope{
 		Config:      config,
 		ConfigOwner: owner,
@@ -270,12 +279,14 @@ func (r *TalosConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, rerr
 		}
 	}
 
-	err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
+	var dataSecretName string
+
+	dataSecretName, err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	config.Status.DataSecretName = tcScope.ConfigOwner.DataSecretName()
+	config.Status.DataSecretName = &dataSecretName
 	config.Status.TalosConfig = retData.TalosConfig
 	config.Status.Ready = true
 
