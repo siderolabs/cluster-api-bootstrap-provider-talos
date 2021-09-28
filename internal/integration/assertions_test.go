@@ -119,6 +119,7 @@ func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.
 
 	checks := []func(p machineconfig.Provider) interface{}{
 		func(p machineconfig.Provider) interface{} { return p.Machine().Security().Token() },
+		func(p machineconfig.Provider) interface{} { return p.Machine().Security().CA().Crt },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().ID() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Secret() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Endpoint().String() },

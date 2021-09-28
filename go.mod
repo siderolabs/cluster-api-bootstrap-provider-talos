@@ -9,7 +9,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/talos-systems/crypto v0.3.2
-	github.com/talos-systems/talos/pkg/machinery v0.12.3-0.20210920195258-7e63e43eb399
+	github.com/talos-systems/talos/pkg/machinery v0.12.3
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.17.9
