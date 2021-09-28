@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -216,6 +217,84 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "5ms9d5eke1muskrg", provider.Cluster().Token().Secret())
 		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nMIIBiTCCAS+gAwIBAgIQM4a04RExgV7BBZ2qmazx3TAKBggqhkjOPQQDBDAVMRMw\nEQYDVQQKEwprdWJlcm5ldGVzMB4XDTIxMDkyMDE4NDE0OVoXDTMxMDkxODE4NDE0\nOVowFTETMBEGA1UEChMKa3ViZXJuZXRlczBZMBMGByqGSM49AgEGCCqGSM49AwEH\nA0IABLezryg3QXmplOVP7+ap/ZTQCSlL3qiOeV7m3G8w8rvRaf+La9D0fCVJ9Rj/\nTyuuQFxQ203oeXPIfmE9HqtdjwqjYTBfMA4GA1UdDwEB/wQEAwIChDAdBgNVHSUE\nFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4E\nFgQUW0vg9AdP/ZK5+yR/73BpfvPRHMkwCgYIKoZIzj0EAwQDSAAwRQIgdvTMbjH+\n4XOMZzFIDjnq42I/suDw4cnGXcrlWdJ+aZYCIQDurrEAKmPrMgNqT2wP6JWYylla\n3l7yV8hS5CgCpJTaEg==\n-----END CERTIFICATE-----\n", string(provider.Cluster().CA().Crt)) //nolint:lll
 		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nMIIBPzCB8qADAgECAhEArv8iYjWXC8Mataa8e2pezDAFBgMrZXAwEDEOMAwGA1UE\nChMFdGFsb3MwHhcNMjEwOTIwMTg0MTQ5WhcNMzEwOTE4MTg0MTQ5WjAQMQ4wDAYD\nVQQKEwV0YWxvczAqMAUGAytlcAMhAOCRMlGNjsdQmgls2PCSgMdMeAIB8fAKsnCp\naXX3rfUKo2EwXzAOBgNVHQ8BAf8EBAMCAoQwHQYDVR0lBBYwFAYIKwYBBQUHAwEG\nCCsGAQUFBwMCMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFIDgT1HeMDtWHHXl\nmVhYqUPDU0JoMAUGAytlcANBAD2GLO2vG9MHGxt9658X4xZLSYNldAgDy2tHmZ7l\nnAjAR0npZoQXBVhorrQEcea7g6To9BDmtzrF0StW895d0Ak=\n-----END CERTIFICATE-----\n", string(provider.Machine().Security().CA().Crt))
+	})
+
+	t.Run("ConfigTypeNone", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
+
+		secretsBundle, err := generate.NewSecretsBundle(generate.NewClock())
+		require.NoError(t, err)
+
+		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", "v1.22.2", secretsBundle)
+		require.NoError(t, err)
+
+		workers := []*bootstrapv1alpha3.TalosConfig{}
+
+		for i := 0; i < 4; i++ {
+			machine := createMachine(ctx, t, c, cluster)
+
+			machineconfig, err := generate.Config(talosmachine.TypeWorker, input)
+			require.NoError(t, err)
+
+			configdata, err := machineconfig.Bytes()
+			require.NoError(t, err)
+
+			workers = append(workers, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+				GenerateType: "none",
+				Data:         string(configdata),
+			}))
+		}
+
+		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
+
+		for i := 0; i < 3; i++ {
+			machine := createMachine(ctx, t, c, cluster)
+
+			machineType := talosmachine.TypeInit
+
+			if i > 0 {
+				machineType = talosmachine.TypeControlPlane
+			}
+
+			machineconfig, err := generate.Config(machineType, input)
+			require.NoError(t, err)
+
+			configdata, err := machineconfig.Bytes()
+			require.NoError(t, err)
+
+			controlplanes = append(controlplanes, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+				GenerateType: "none",
+				Data:         string(configdata),
+			}))
+		}
+
+		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
+			waitForReady(ctx, t, c, talosConfig)
+
+			// Note, for config type none we don't generate talosconfig (why?)
+
+			provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+			switch {
+			case i == 0:
+				assert.Equal(t, talosmachine.TypeInit, provider.Machine().Type())
+			case i < len(controlplanes):
+				assert.Equal(t, talosmachine.TypeControlPlane, provider.Machine().Type())
+			default:
+				assert.Equal(t, talosmachine.TypeWorker, provider.Machine().Type())
+			}
+		}
+
+		assertClusterCA(ctx, t, c, cluster, assertMachineConfiguration(ctx, t, c, controlplanes[0]))
+
+		// compare control plane secrets completely
+		assertSameMachineConfigSecrets(ctx, t, c, controlplanes...)
+
+		// compare all configs in more relaxed mode
+		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
 	})
 
 }
