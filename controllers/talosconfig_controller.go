@@ -331,8 +331,11 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 	}
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
-	if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA()); err != nil {
-		return retBundle, err
+	// but do this only when machineconfig contains full Kubernetes CA secret (controlplane nodes)
+	if userConfig.Cluster().CA() != nil && len(userConfig.Cluster().CA().Crt) > 0 && len(userConfig.Cluster().CA().Key) > 0 {
+		if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA()); err != nil {
+			return retBundle, err
+		}
 	}
 
 	userConfigStr, err := userConfig.String()
