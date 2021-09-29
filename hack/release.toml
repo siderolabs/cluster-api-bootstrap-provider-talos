@@ -6,7 +6,7 @@ github_repo = "talos-systems/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(talos-systems/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.2.0"
+previous = "v0.3.0"
 
 pre_release = false
 
@@ -16,18 +16,9 @@ preface = """\
 [notes]
 
     [notes.talos]
-        title = "Talos 0.12"
+        title = "Talos 0.12.3"
         description = """\
-CABPT supports config generation for Talos 0.12.
-Talos majort version can be specified in the spec of `TalosControlPlane` or `MachineDeployment`:
-
-```yaml
-  generateType: controlplane
-  talosVersion: v0.11
-```
-
-It is recommended to specify minor version of Talos to make sure machine configuration stays comptabile with Talos version
-being used even if the CABPT is upgraded to new version.
+CABPT supports config generation for Talos 0.12.3 (and previous Talos releases).
 """
 
     [notes.capi]
@@ -38,11 +29,8 @@ Next release of CABPT will bring compatibility with CAPI v1alpha4 (v0.4.x).
 """
 
     [notes.defaultversion]
-        title = "Default `talosVersion`"
+        title = "configType `none`"
         description = """\
-In previous releases of CABPT default value of `talosVersion` field was `v0.8`.
-As Talos v0.8 release is almost a year old, new default value of `talosVersion` is to use whatever Talos version CABPT was
-built against (in this relase, it's Talos 0.12).
-
-If you're still running Talos v0.8.x, please make sure `talosVersion` is set to `v0.8`.
+This releases fixes generation of `<cluster>-ca` secret for user-provided machine configuration with `configType: none`
+(https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues/97).
 """

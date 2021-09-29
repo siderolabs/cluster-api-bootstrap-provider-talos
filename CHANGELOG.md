@@ -1,3 +1,48 @@
+## [CAPI Bootstrap Provider Talos 0.3.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.1) (2021-09-29)
+
+Welcome to the v0.3.1 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1alpha3
+
+This release of CABPT is compatible with CAPI v1alpha3 (v0.3.x).
+Next release of CABPT will bring compatibility with CAPI v1alpha4 (v0.4.x).
+
+
+### configType `none`
+
+This releases fixes generation of `<cluster>-ca` secret for user-provided machine configuration with `configType: none`
+(https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues/97).
+
+
+### Talos 0.12.3
+
+CABPT supports config generation for Talos 0.12.3 (and previous Talos releases).
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`874f5a7`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/874f5a7caa03c26da24db3fddc4d9dcf5eef9545) fix: don't write incomplete `<cluster>-ca` secret for configtype none
+* [`c3875b8`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/c3875b80234eb84c560ba7500b868bf1507325f6) feat: bump Talos machinery to 0.12.3
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/talos-systems/talos/pkg/machinery**  7e63e43eb399 -> v0.12.3
+
+Previous release can be found at [v0.3.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.0)
+
 ## [CAPI Bootstrap Provider Talos 0.3.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.0) (2021-09-22)
 
 Welcome to the v0.3.0 release of CAPI Bootstrap Provider Talos!
