@@ -116,8 +116,6 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		},
 	}
 
-	require.NoError(t, controllerutil.SetOwnerReference(cluster, machine, scheme.Scheme))
-
 	require.NoError(t, c.Create(ctx, machine))
 
 	return machine
