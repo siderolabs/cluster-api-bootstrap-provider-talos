@@ -7,12 +7,14 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/spf13/pflag"
 	cgrecord "k8s.io/client-go/tools/record"
+	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/feature"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -29,6 +31,7 @@ var (
 	metricsAddr          string
 	enableLeaderElection bool
 	webhookPort          int
+	watchFilterValue     string
 )
 
 func InitFlags(fs *pflag.FlagSet) {
@@ -40,6 +43,9 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.IntVar(&webhookPort, "webhook-port", 9443,
 		"Webhook Server port, disabled by default. When enabled, the manager will only work as webhook server, no reconcilers are installed.")
+
+	fs.StringVar(&watchFilterValue, "watch-filter", "",
+		fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", capiv1.WatchLabel))
 
 	feature.MutableGates.AddFlag(fs)
 }
@@ -76,9 +82,10 @@ func main() {
 	ctx := context.Background()
 
 	if err = (&controllers.TalosConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("TalosConfig"),
-		Scheme: mgr.GetScheme(),
+		Client:           mgr.GetClient(),
+		Log:              ctrl.Log.WithName("controllers").WithName("TalosConfig"),
+		Scheme:           mgr.GetScheme(),
+		WatchFilterValue: watchFilterValue,
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TalosConfig")
 		os.Exit(1)

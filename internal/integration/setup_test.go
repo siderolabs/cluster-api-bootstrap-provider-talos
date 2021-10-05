@@ -131,7 +131,7 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 					//   this allows us to override that removing the finalizer(s)
 					var machineList capiv1.MachineList
 
-					err = c.List(ctx, &machineList, client.InNamespace(namespace))
+					err = c.List(context.Background(), &machineList, client.InNamespace(namespace))
 					if err != nil {
 						t.Log("error listing machines", err)
 
@@ -141,7 +141,7 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 					for _, machine := range machineList.Items {
 						machine.Finalizers = nil
 
-						if err = c.Update(ctx, &machine); err != nil {
+						if err = c.Update(context.Background(), &machine); err != nil {
 							// conflicts might be ignored here, as eventually this will succeed
 							t.Log("error updating machine's finalizers", err)
 						}
@@ -218,7 +218,7 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	t.Helper()
 
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", Artifacts, "bootstrap-talos", Tag)},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			ErrorIfPathMissing: true,
 			MaxTime:            20 * time.Second,

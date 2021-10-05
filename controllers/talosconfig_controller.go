@@ -29,6 +29,7 @@ import (
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,8 +54,9 @@ var (
 // TalosConfigReconciler reconciles a TalosConfig object
 type TalosConfigReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	WatchFilterValue string
 }
 
 type TalosConfigScope struct {
@@ -86,6 +88,7 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&bootstrapv1alpha3.TalosConfig{}).
 		WithOptions(options).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Watches(
 			&source.Kind{Type: &capiv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
@@ -95,7 +98,8 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		b = b.Watches(
 			&source.Kind{Type: &expv1.MachinePool{}},
 			handler.EnqueueRequestsFromMapFunc(r.MachinePoolToBootstrapMapFunc),
-		)
+		).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
+
 	}
 
 	c, err := b.Build(r)
@@ -106,7 +110,10 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 	err = c.Watch(
 		&source.Kind{Type: &capiv1.Cluster{}},
 		handler.EnqueueRequestsFromMapFunc(r.ClusterToTalosConfigs),
-		predicates.ClusterUnpausedAndInfrastructureReady(r.Log),
+		predicates.All(ctrl.LoggerFrom(ctx),
+			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue),
+		),
 	)
 	if err != nil {
 		return err
@@ -143,7 +150,25 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	// Always attempt to Patch the TalosConfig object and status after each reconciliation.
 	defer func() {
-		if err := patchHelper.Patch(ctx, config); err != nil {
+		// always update the readyCondition; the summary is represented using the "1 of x completed" notation.
+		conditions.SetSummary(config,
+			conditions.WithConditions(
+				bootstrapv1alpha3.DataSecretAvailableCondition,
+			),
+		)
+		// Patch ObservedGeneration only if the reconciliation completed successfully
+		patchOpts := []patch.Option{
+			patch.WithOwnedConditions{
+				Conditions: []capiv1.ConditionType{
+					bootstrapv1alpha3.DataSecretAvailableCondition,
+				},
+			},
+		}
+		if rerr == nil {
+			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+		}
+
+		if err := patchHelper.Patch(ctx, config, patchOpts...); err != nil {
 			log.Error(err, "failed to patch config")
 			if rerr == nil {
 				rerr = err
@@ -151,10 +176,8 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}()
 
-	// If the talosConfig doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(config, bootstrapv1alpha3.ConfigFinalizer)
-
-	// Handle deleted machines
+	// Handle deleted talosconfigs
+	// We no longer set finalizers on talosconfigs, but we have to remove previously set finalizers
 	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, config)
 	}
@@ -165,29 +188,45 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Error(err, "could not get owner resource")
 		return ctrl.Result{}, err
 	}
+
 	if owner == nil {
 		log.Info("Waiting for OwnerRef on the talosconfig")
-		return ctrl.Result{}, errors.New("no owner ref")
+		return ctrl.Result{}, nil
 	}
+
 	log = log.WithName(fmt.Sprintf("owner-name=%s", owner.GetName()))
 
 	// Lookup the cluster the machine is associated with
 	cluster, err := util.GetClusterByName(ctx, r.Client, owner.GetNamespace(), owner.ClusterName())
 	if err != nil {
+		if errors.Is(err, util.ErrNoCluster) {
+			log.Info(fmt.Sprintf("%s does not belong to a cluster yet, waiting until it's part of a cluster", owner.GetKind()))
+			return ctrl.Result{}, nil
+		}
+
+		if apierrors.IsNotFound(err) {
+			log.Info("Cluster does not exist yet, waiting until it is created")
+			return ctrl.Result{}, nil
+		}
+
 		log.Error(err, "could not get cluster by machine metadata")
+
 		return ctrl.Result{}, err
 	}
 
 	// bail super early if it's already ready
 	if config.Status.Ready {
 		log.Info("ignoring an already ready config")
+		conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
 		return ctrl.Result{}, nil
 	}
 
 	// Wait patiently for the infrastructure to be ready
 	if !cluster.Status.InfrastructureReady {
 		log.Info("Infrastructure is not ready, waiting until ready.")
-		return ctrl.Result{}, errors.New("infra not ready")
+		conditions.MarkFalse(config, bootstrapv1alpha3.DataSecretAvailableCondition, bootstrapv1alpha3.WaitingForClusterInfrastructureReason, capiv1.ConditionSeverityInfo, "")
+
+		return ctrl.Result{}, nil
 	}
 
 	// Reconcile status for machines that already have a secret reference, but our status isn't up to date.
@@ -195,6 +234,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if owner.DataSecretName() != nil && (!config.Status.Ready || config.Status.DataSecretName == nil) {
 		config.Status.Ready = true
 		config.Status.DataSecretName = owner.DataSecretName()
+		conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
 
 		return ctrl.Result{}, nil
 	}
@@ -205,7 +245,25 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Cluster:     cluster,
 	}
 
-	var retData *TalosConfigBundle
+	if err = r.reconcileGenerate(ctx, tcScope); err != nil {
+		conditions.MarkFalse(config, bootstrapv1alpha3.DataSecretAvailableCondition, bootstrapv1alpha3.DataSecretGenerationFailedReason, capiv1.ConditionSeverityError, err.Error())
+
+		return ctrl.Result{}, err
+	}
+
+	config.Status.Ready = true
+	conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *TalosConfigScope) error {
+	var (
+		retData *TalosConfigBundle
+		err     error
+	)
+
+	config := tcScope.Config
 
 	machineType, _ := machine.ParseType(config.Spec.GenerateType) //nolint:errcheck // handle errors later
 
@@ -213,22 +271,23 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Slurp and use user-supplied configs
 	case config.Spec.GenerateType == "none":
 		if config.Spec.Data == "" {
-			return ctrl.Result{}, errors.New("failed to specify config data with none generate type")
+			return errors.New("failed to specify config data with none generate type")
 		}
+
 		retData, err = r.userConfigs(ctx, tcScope)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 
 	// Generate configs on the fly
 	case machineType != machine.TypeUnknown:
 		retData, err = r.genConfigs(ctx, tcScope)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 
 	default:
-		return ctrl.Result{}, fmt.Errorf("unknown generate type specified: %q", config.Spec.GenerateType)
+		return fmt.Errorf("unknown generate type specified: %q", config.Spec.GenerateType)
 	}
 
 	// Handle patches to the machine config if they were specified
@@ -236,17 +295,17 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if len(config.Spec.ConfigPatches) > 0 {
 		marshalledPatches, err := json.Marshal(config.Spec.ConfigPatches)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failure marshalling config patches: %s", err)
+			return fmt.Errorf("failure marshalling config patches: %s", err)
 		}
 
 		patch, err := jsonpatch.DecodePatch(marshalledPatches)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failure decoding config patches from talosconfig to rfc6902 patch: %s", err)
+			return fmt.Errorf("failure decoding config patches from talosconfig to rfc6902 patch: %s", err)
 		}
 
 		patchedBytes, err := configpatcher.JSON6902([]byte(retData.BootstrapData), patch)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 
 		retData.BootstrapData = string(patchedBytes)
@@ -254,19 +313,21 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Packet acts a fool if you don't prepend #!talos to the userdata
 	// so we try to suss out if that's the type of machine/machinePool getting created.
-	if owner.IsMachinePool() {
+	if tcScope.ConfigOwner.IsMachinePool() {
 		mp := &expv1.MachinePool{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(owner.Object, mp); err != nil {
-			return ctrl.Result{}, err
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(tcScope.ConfigOwner.Object, mp); err != nil {
+			return err
 		}
+
 		if mp.Spec.Template.Spec.InfrastructureRef.Kind == "PacketMachinePool" {
 			retData.BootstrapData = "#!talos\n" + retData.BootstrapData
 		}
 	} else {
 		machine := &capiv1.Machine{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(owner.Object, machine); err != nil {
-			return ctrl.Result{}, err
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(tcScope.ConfigOwner.Object, machine); err != nil {
+			return err
 		}
+
 		if machine.Spec.InfrastructureRef.Name == "PacketMachine" {
 			retData.BootstrapData = "#!talos\n" + retData.BootstrapData
 		}
@@ -276,14 +337,13 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	dataSecretName, err = r.writeBootstrapData(ctx, tcScope, []byte(retData.BootstrapData))
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	config.Status.DataSecretName = &dataSecretName
 	config.Status.TalosConfig = retData.TalosConfig
-	config.Status.Ready = true
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *bootstrapv1alpha3.TalosConfig) (ctrl.Result, error) {

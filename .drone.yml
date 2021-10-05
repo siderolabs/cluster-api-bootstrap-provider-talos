@@ -5,7 +5,7 @@ name: default
 
 services:
   - name: docker
-    image: docker:20.10-dind
+    image: ghcr.io/smira/docker:20.10-dind-hacked
     entrypoint: [dockerd]
     privileged: true
     volumes:
@@ -53,6 +53,7 @@ steps:
       INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
     commands:
       - make env-up
+      - make release-manifests
       - make test
     when:
       event:
@@ -74,6 +75,10 @@ steps:
     environment:
       CODECOV_TOKEN:
         from_secret: CODECOV_TOKEN
+    when:
+      event:
+        include:
+          - pull_request
     volumes:
       - name: docker-socket
         path: /var/run
@@ -176,6 +181,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: a7d3d09b2ec221337f14cde8f5f2a872a4c3500df09b7f27e6a169a4eb35944b
+hmac: 405eea502f51dfc9368f81971ca97c96ac99f5fff6ddc1afa613894e80dd67c2
 
 ...

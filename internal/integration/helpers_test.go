@@ -22,11 +22,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	// +kubebuilder:scaffold:imports
@@ -61,7 +59,7 @@ func generateName(t *testing.T, kind string) string {
 }
 
 // createCluster creates a Cluster with "ready" infrastructure.
-func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec *capiv1.ClusterSpec) *capiv1.Cluster {
+func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec *capiv1.ClusterSpec, infrastructureReady bool) *capiv1.Cluster {
 	t.Helper()
 
 	clusterName := generateName(t, "cluster")
@@ -86,17 +84,19 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 
 	require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
 
-	patchHelper, err := patch.NewHelper(cluster, c)
-	require.NoError(t, err)
+	if infrastructureReady {
+		patchHelper, err := patch.NewHelper(cluster, c)
+		require.NoError(t, err)
 
-	cluster.Status.InfrastructureReady = true
-	require.NoError(t, patchHelper.Patch(ctx, cluster))
+		cluster.Status.InfrastructureReady = true
+		require.NoError(t, patchHelper.Patch(ctx, cluster))
+	}
 
 	return cluster
 }
 
 // createMachine creates a Machine owned by the Cluster.
-func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster) *capiv1.Machine {
+func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, talosconfig *bootstrapv1alpha3.TalosConfig) *capiv1.Machine {
 	t.Helper()
 
 	machineName := generateName(t, "machine")
@@ -111,6 +111,9 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 				ConfigRef: &corev1.ObjectReference{
 					Kind:       "TalosConfig",
 					APIVersion: bootstrapv1alpha3.GroupVersion.String(),
+					Name:       talosconfig.GetName(),
+					Namespace:  talosconfig.GetNamespace(),
+					UID:        talosconfig.GetUID(),
 				},
 			},
 		},
@@ -122,19 +125,17 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 }
 
 // createTalosConfig creates a TalosConfig owned by the Machine.
-func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, machine *capiv1.Machine, spec bootstrapv1alpha3.TalosConfigSpec) *bootstrapv1alpha3.TalosConfig {
+func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec bootstrapv1alpha3.TalosConfigSpec) *bootstrapv1alpha3.TalosConfig {
 	t.Helper()
 
 	talosConfigName := generateName(t, "talosconfig")
 	talosConfig := &bootstrapv1alpha3.TalosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: machine.Namespace,
+			Namespace: namespaceName,
 			Name:      talosConfigName,
 		},
 		Spec: spec,
 	}
-
-	require.NoError(t, controllerutil.SetOwnerReference(machine, talosConfig, scheme.Scheme))
 
 	require.NoError(t, c.Create(ctx, talosConfig))
 

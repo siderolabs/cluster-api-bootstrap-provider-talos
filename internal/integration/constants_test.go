@@ -6,3 +6,9 @@ package integration
 
 // TalosVersion is set by the build process.
 var TalosVersion string
+
+// Artifacts is set by the build process.
+var Artifacts string
+
+// Tag is set by the build process.
+var Tag string

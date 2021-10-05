@@ -55,7 +55,10 @@ COPY --from=generate-build /src/api /api
 FROM build AS integration-test-build
 ENV CGO_ENABLED 1
 ARG TALOS_VERSION
-ARG GO_LDFLAGS="-linkmode=external -extldflags '-static' -X github.com/talos-systems/cluster-api-bootstrap-provider-talos/internal/integration.TalosVersion=${TALOS_VERSION}"
+ARG TAG
+ARG ARTIFACTS
+ARG PKG=github.com/talos-systems/cluster-api-bootstrap-provider-talos/internal/integration
+ARG GO_LDFLAGS="-linkmode=external -extldflags '-static' -X ${PKG}.TalosVersion=${TALOS_VERSION} -X ${PKG}.Artifacts=${ARTIFACTS} -X ${PKG}.Tag=${TAG}"
 RUN --mount=type=cache,target=/.cache go test -race -ldflags "${GO_LDFLAGS}" -coverpkg=./... -v -c ./internal/integration
 
 FROM scratch AS integration-test
@@ -74,7 +77,7 @@ RUN cd config/manager \
   && kustomize build config/default > /bootstrap-components.yaml \
   && cp config/metadata/metadata.yaml /metadata.yaml
 
-FROM scratch AS release
+FROM scratch AS release-manifests
 ARG TAG
 COPY --from=release-build /bootstrap-components.yaml /bootstrap-talos/${TAG}/bootstrap-components.yaml
 COPY --from=release-build /metadata.yaml /bootstrap-talos/${TAG}/metadata.yaml

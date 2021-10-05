@@ -31,6 +31,7 @@ COMMON_ARGS += --build-arg=TOOLS=$(TOOLS)
 COMMON_ARGS += --build-arg=CONTROLLER_GEN_VERSION=$(CONTROLLER_GEN_VERSION)
 COMMON_ARGS += --build-arg=CONVERSION_GEN_VERSION=$(CONVERSION_GEN_VERSION)
 COMMON_ARGS += --build-arg=TALOS_VERSION=$(TALOS_VERSION)
+COMMON_ARGS += --build-arg=ARTIFACTS=$(ARTIFACTS)
 
 all: manifests container
 
@@ -91,9 +92,12 @@ release-notes: ## Create the release notes.
 	@mkdir -p $(ARTIFACTS)
 	ARTIFACTS=$(ARTIFACTS) ./hack/release.sh $@ $(ARTIFACTS)/RELEASE_NOTES.md $(TAG)
 
-.PHONY: release
-release: manifests container release-notes ## Create the release YAML. The build result will be ouput to the specified local destination.
+.PHONY: release-manifests
+release-manifests:
 	@$(MAKE) local-$@ DEST=./$(ARTIFACTS) PLATFORM=linux/amd64
+
+.PHONY: release
+release: manifests container release-notes release-manifests ## Create the release YAML. The build result will be ouput to the specified local destination.
 
 .PHONY: deploy
 deploy: manifests ## Deploy to a cluster. This is for testing purposes only.

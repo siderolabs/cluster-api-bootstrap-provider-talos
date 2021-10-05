@@ -7,6 +7,7 @@ package integration
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 )
 
 func TestIntegration(t *testing.T) {
@@ -28,11 +32,11 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		machine := createMachine(ctx, t, c, cluster)
-		talosConfig := createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 		})
+		createMachine(ctx, t, c, cluster, talosConfig)
 		waitForReady(ctx, t, c, talosConfig)
 
 		assertClientConfig(t, talosConfig)
@@ -50,34 +54,36 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
 
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 3; i++ {
-			machine := createMachine(ctx, t, c, cluster)
-
 			machineType := talosmachine.TypeInit
 
 			if i > 0 {
 				machineType = talosmachine.TypeControlPlane
 			}
 
-			controlplanes = append(controlplanes, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: machineType.String(),
 				TalosVersion: TalosVersion,
-			}))
+			})
+			createMachine(ctx, t, c, cluster, talosConfig)
+
+			controlplanes = append(controlplanes, talosConfig)
 		}
 
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 4; i++ {
-			machine := createMachine(ctx, t, c, cluster)
-
-			workers = append(workers, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: talosmachine.TypeWorker.String(),
 				TalosVersion: TalosVersion,
-			}))
+			})
+			createMachine(ctx, t, c, cluster, talosConfig)
+
+			workers = append(workers, talosConfig)
 		}
 
 		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
@@ -131,12 +137,12 @@ func TestIntegration(t *testing.T) {
 				Host: "example.com",
 				Port: 443,
 			},
-		})
-		machine := createMachine(ctx, t, c, cluster)
-		talosConfig := createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+		}, true)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 		})
+		createMachine(ctx, t, c, cluster, talosConfig)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -151,9 +157,8 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		machine := createMachine(ctx, t, c, cluster)
-		talosConfig := createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 			ConfigPatches: []bootstrapv1alpha3.ConfigPatches{
@@ -173,6 +178,7 @@ func TestIntegration(t *testing.T) {
 				},
 			},
 		})
+		createMachine(ctx, t, c, cluster, talosConfig)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -185,8 +191,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		machine := createMachine(ctx, t, c, cluster)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
 
 		// create a secret which imitates legacy secret format.
 		clusterSecret := corev1.Secret{
@@ -202,10 +207,11 @@ func TestIntegration(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(legacySecretData), &clusterSecret.Data))
 		require.NoError(t, c.Create(ctx, &clusterSecret))
 
-		talosConfig := createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: TalosVersion,
 		})
+		createMachine(ctx, t, c, cluster, talosConfig)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -223,7 +229,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
 
 		secretsBundle, err := generate.NewSecretsBundle(generate.NewClock())
 		require.NoError(t, err)
@@ -234,7 +240,6 @@ func TestIntegration(t *testing.T) {
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 4; i++ {
-			machine := createMachine(ctx, t, c, cluster)
 
 			machineconfig, err := generate.Config(talosmachine.TypeWorker, input)
 			require.NoError(t, err)
@@ -242,16 +247,18 @@ func TestIntegration(t *testing.T) {
 			configdata, err := machineconfig.Bytes()
 			require.NoError(t, err)
 
-			workers = append(workers, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: "none",
 				Data:         string(configdata),
-			}))
+			})
+			createMachine(ctx, t, c, cluster, talosConfig)
+
+			workers = append(workers, talosConfig)
 		}
 
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 3; i++ {
-			machine := createMachine(ctx, t, c, cluster)
 
 			machineType := talosmachine.TypeInit
 
@@ -265,10 +272,13 @@ func TestIntegration(t *testing.T) {
 			configdata, err := machineconfig.Bytes()
 			require.NoError(t, err)
 
-			controlplanes = append(controlplanes, createTalosConfig(ctx, t, c, machine, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: "none",
 				Data:         string(configdata),
-			}))
+			})
+			createMachine(ctx, t, c, cluster, talosConfig)
+
+			controlplanes = append(controlplanes, talosConfig)
 		}
 
 		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
@@ -297,6 +307,106 @@ func TestIntegration(t *testing.T) {
 		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
 	})
 
+	t.Run("InfrastructureNotReady", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, false)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeInit.String(),
+		})
+		createMachine(ctx, t, c, cluster, talosConfig)
+
+		// assert that controller reports condition
+
+		for ctx.Err() == nil {
+			key := types.NamespacedName{
+				Namespace: talosConfig.Namespace,
+				Name:      talosConfig.Name,
+			}
+
+			err := c.Get(ctx, key, talosConfig)
+			require.NoError(t, err)
+
+			if conditions.IsFalse(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) &&
+				conditions.GetReason(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) == bootstrapv1alpha3.WaitingForClusterInfrastructureReason {
+				break
+			}
+
+			t.Log("Waiting ...")
+			sleepCtx(ctx, 3*time.Second)
+		}
+
+		require.NoError(t, ctx.Err())
+
+		assert.Equal(t, capiv1.ConditionSeverityInfo, *conditions.GetSeverity(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+
+		// patch to make infrastructure ready
+		patchHelper, err := patch.NewHelper(cluster, c)
+		require.NoError(t, err)
+
+		cluster.Status.InfrastructureReady = true
+		require.NoError(t, patchHelper.Patch(ctx, cluster))
+
+		waitForReady(ctx, t, c, talosConfig)
+
+		assertClientConfig(t, talosConfig)
+
+		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+		assert.Equal(t, talosmachine.TypeInit, provider.Machine().Type())
+
+		assertClusterCA(ctx, t, c, cluster, provider)
+
+		assertControllerSecret(ctx, t, c, cluster, provider)
+	})
+
+	t.Run("BadConfigPatch", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeInit.String(),
+			TalosVersion: TalosVersion,
+			ConfigPatches: []bootstrapv1alpha3.ConfigPatches{
+				{
+					Op:   "add",
+					Path: "/machine/time/servers",
+					Value: apiextensions.JSON{
+						Raw: []byte(`["time.cloudflare.com"]`),
+					},
+				},
+			},
+		})
+		createMachine(ctx, t, c, cluster, talosConfig)
+
+		// assert that controller reports failure condition
+		for ctx.Err() == nil {
+			key := types.NamespacedName{
+				Namespace: talosConfig.Namespace,
+				Name:      talosConfig.Name,
+			}
+
+			err := c.Get(ctx, key, talosConfig)
+			require.NoError(t, err)
+
+			if conditions.IsFalse(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) &&
+				conditions.GetReason(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) == bootstrapv1alpha3.DataSecretGenerationFailedReason {
+				break
+			}
+
+			t.Log("Waiting ...")
+			sleepCtx(ctx, 3*time.Second)
+		}
+
+		require.NoError(t, ctx.Err())
+
+		assert.Equal(t, capiv1.ConditionSeverityError, *conditions.GetSeverity(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+		assert.Equal(t,
+			"failure applying rfc6902 patches to talos machine config: add operation does not apply: doc is missing path: \"/machine/time/servers\": missing value",
+			conditions.GetMessage(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+	})
 }
 
 // legacy cluster secret format

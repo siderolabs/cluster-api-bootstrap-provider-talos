@@ -2,7 +2,7 @@
 
 ## Intro
 
-The Cluster API Bootstrap Provider Talos (CABPT) is a project by [Talos Systems](https://www.talos-systems.com/) that provides a [Cluster API](https://github.com/kubernetes-sigs/cluster-api)(CAPI) bootstrap provider for use in deploying Talos-based Kubernetes nodes across any environment.
+The Cluster API Bootstrap Provider Talos (CABPT) is a project by [Sidero Labs](https://www.siderolabs.com/) that provides a [Cluster API](https://github.com/kubernetes-sigs/cluster-api)(CAPI) bootstrap provider for use in deploying Talos-based Kubernetes nodes across any environment.
 Given some basic info, this provider will generate bootstrap configurations for a given machine and reconcile the necessary custom resources for CAPI to pick up the generated data.
 
 ## Corequisites
@@ -10,7 +10,6 @@ Given some basic info, this provider will generate bootstrap configurations for 
 There are a few corequisites and assumptions that go into using this project:
 
 - [Cluster API](https://github.com/kubernetes-sigs/cluster-api)
-- [Cluster API Provider Metal](https://github.com/talos-systems/cluster-api-provider-metal) (optional)
 
 ## Building and Installing
 
@@ -24,14 +23,14 @@ You will need at least the upstream CAPI components and an infrastructure provid
 
 ## Usage
 
-CAPM supports a single API type, a TalosConfig.
+CABPT supports a single API type, a TalosConfig.
 You can create YAML definitions of a TalosConfig and `kubectl apply` them as part of a larger CAPI cluster deployment.
 Below is a bare-minimum example.
 
 A basic config:
 
 ```yaml
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha2
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
 kind: TalosConfig
 metadata:
   name: talos-0
@@ -48,13 +47,13 @@ When creating a TalosConfig this way, you can then retrieve the talosconfig file
 
 If you wish to do something more complex, we allow for the ability to supply an entire Talos config file to the resource.
 This can be done by setting the generateType to `none` and specifying a `data` field.
-This config file can be generated with `osctl config generate` and the edited to supply the various options you may desire.
+This config file can be generated with `talosctl config generate` and the edited to supply the various options you may desire.
 This full config is blindly copied from the `data` section of the spec and presented under `.status.bootstrapData` so that the upstream CAPI controllers can see it and make use.
 
 An example of a more complex config:
 
 ```yaml
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha2
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
 kind: TalosConfig
 metadata:
   name: talos-0
@@ -72,5 +71,5 @@ spec:
     ...
 ```
 
-Note that specifying the full config above removes the ability for our bootstrap provider to generate a talosconfig for use.
-As such, you should keep track of the talosconfig that's generated when running `osctl config generate`.
+Note that specifying the full config above removes the ability for our bootstrap provider to generate a machine configuration for use.
+As such, you should keep track of the machine configuration that's generated when running `talosctl config generate`.
