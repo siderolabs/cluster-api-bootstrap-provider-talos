@@ -1,3 +1,63 @@
+## [CAPI Bootstrap Provider Talos 0.4.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.0) (2021-10-08)
+
+Welcome to the v0.4.0 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1alpha4
+
+CABPT now supports CAPI v1alpha4.
+
+Support new conditions, which should simplify CABPT issues debugging:
+- `DataSecretAvailable` documents the status of the bootstrap secret generation process.
+- `WaitingForClusterInfrastructure` waiting for the cluster infrastructure to be ready.
+- `DataSecretGenerationFailed` detecting an error while generating a data secret.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Artem Chernyshev
+* Spencer Smith
+
+### Changes
+<details><summary>6 commits</summary>
+<p>
+
+* [`04742b9`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/04742b96bf757413c88d0f15bee91679644f0337) feat: import fixes/updates from kubeadm bootstrap provider
+* [`548b7fb`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/548b7fbd38b89b9790a0daa2380fddb34157cdd5) release(v0.4.0-alpha.0): prepare release
+* [`442ee41`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/442ee41bafb2a912e49928c5d61f52c4c61a2593) test: don't set the talosconfig owner ref to the machine
+* [`8c7fec8`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/8c7fec8e373bd12609f6274d79ca07d187212d91) fix: don't write incomplete `<cluster>-ca` secret for configtype none
+* [`f46c83d`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/f46c83d328ee44db2ccb5eef67b366cc73c13319) feat: bump Talos machinery to 0.12.3
+* [`7b760cf`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/7b760cf69ecab93200821dded931171657a5dedc) feat: support CAPI v1alpha4
+</p>
+</details>
+
+### Changes since v0.4.0-alpha.0
+<details><summary>1 commit</summary>
+<p>
+
+* [`04742b9`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/04742b96bf757413c88d0f15bee91679644f0337) feat: import fixes/updates from kubeadm bootstrap provider
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/go-logr/logr**                       v0.1.0 -> v0.4.0
+* **github.com/talos-systems/talos/pkg/machinery**  7e63e43eb399 -> v0.12.3
+* **golang.org/x/sys**                              0f9fa26af87c -> bfb29a6856f2
+* **k8s.io/api**                                    v0.17.9 -> v0.21.4
+* **k8s.io/apiextensions-apiserver**                v0.17.9 -> v0.21.4
+* **k8s.io/apimachinery**                           v0.17.9 -> v0.21.4
+* **k8s.io/client-go**                              v0.17.9 -> v0.21.4
+* **sigs.k8s.io/cluster-api**                       v0.3.22 -> v0.4.3
+* **sigs.k8s.io/controller-runtime**                v0.5.14 -> v0.9.7
+
+Previous release can be found at [v0.3.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.0)
+
 ## [CAPI Bootstrap Provider Talos 0.4.0-alpha.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.0-alpha.0) (2021-10-01)
 
 Welcome to the v0.4.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
