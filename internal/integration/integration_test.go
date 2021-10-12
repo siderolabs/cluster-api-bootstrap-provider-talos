@@ -6,6 +6,7 @@ package integration
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -143,8 +144,8 @@ func TestIntegration(t *testing.T) {
 
 		assert.Equal(t, "https://example.com:443", provider.Cluster().Endpoint().String())
 		assert.Equal(t, "mycluster.local", provider.Cluster().Network().DNSDomain())
-		assert.Equal(t, "10.0.0.0/16,fdbb:bbbb:cccc:15::/64", provider.Cluster().Network().PodCIDR())
-		assert.Equal(t, "192.168.0.0/16,fdaa:bbbb:cccc:15::/64", provider.Cluster().Network().ServiceCIDR())
+		assert.Equal(t, "10.0.0.0/16,fdbb:bbbb:cccc:15::/64", strings.Join(provider.Cluster().Network().PodCIDRs(), ","))
+		assert.Equal(t, "192.168.0.0/16,fdaa:bbbb:cccc:15::/64", strings.Join(provider.Cluster().Network().ServiceCIDRs(), ","))
 	})
 
 	t.Run("ConfigPatches", func(t *testing.T) {
