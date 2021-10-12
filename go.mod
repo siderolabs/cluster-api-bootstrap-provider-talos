@@ -8,9 +8,9 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/talos-systems/crypto v0.3.2
-	github.com/talos-systems/talos/pkg/machinery v0.12.3
-	golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2
+	github.com/talos-systems/crypto v0.3.4
+	github.com/talos-systems/talos/pkg/machinery v0.13.0
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver v0.21.4
@@ -26,9 +26,9 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/containerd/go-cni v1.0.2 // indirect
-	github.com/containernetworking/cni v0.8.1 // indirect
-	github.com/cosi-project/runtime v0.0.0-20210707150857-25f235cd0682 // indirect
+	github.com/containerd/go-cni v1.1.0 // indirect
+	github.com/containernetworking/cni v1.0.1 // indirect
+	github.com/cosi-project/runtime v0.0.0-20210906201716-5cb7f5002d77 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/drone/envsubst/v2 v2.0.0-20210615175204-7bf45dbf5372 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/native v0.0.0-20200817173448-b6b71def0850 // indirect
-	github.com/jsimonetti/rtnetlink v0.0.0-20210614053835-9c52e516c709 // indirect
+	github.com/jsimonetti/rtnetlink v0.0.0-20210922080037-435639c8e6a8 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
@@ -79,7 +79,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.8.1 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	github.com/talos-systems/go-blockdevice v0.2.3 // indirect
+	github.com/talos-systems/go-blockdevice v0.2.4 // indirect
+	github.com/talos-systems/go-debug v0.2.1 // indirect
 	github.com/talos-systems/net v0.3.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
@@ -92,8 +93,8 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20210722135532-667f2b7c528f // indirect
-	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/genproto v0.0.0-20210924002016-3dee208752a0 // indirect
+	google.golang.org/grpc v1.41.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
