@@ -9,9 +9,9 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 
 TOOLS ?= ghcr.io/talos-systems/tools:v0.8.0-alpha.0-3-g2790b55
-PKGS ?= v0.8.0-alpha.0-3-gdb90f93
-TALOS_VERSION ?= v0.12.1
-K8S_VERSION ?= 1.21.4
+PKGS ?= v0.8.0
+TALOS_VERSION ?= v0.13.0
+K8S_VERSION ?= 1.22.2
 
 CONTROLLER_GEN_VERSION ?= v0.6.2
 CONVERSION_GEN_VERSION ?= v0.21.3
