@@ -6,7 +6,7 @@ github_repo = "talos-systems/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(talos-systems/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.3.0"
+previous = "v0.4.0"
 
 pre_release = false
 
@@ -18,10 +18,12 @@ preface = """\
     [notes.capi]
         title = "CAPI v1alpha4"
         description = """\
-CABPT now supports CAPI v1alpha4.
+CABPT v0.4.x supports CAPI v1alpha4.
+"""
 
-Support new conditions, which should simplify CABPT issues debugging:
-- `DataSecretAvailable` documents the status of the bootstrap secret generation process.
-- `WaitingForClusterInfrastructure` waiting for the cluster infrastructure to be ready.
-- `DataSecretGenerationFailed` detecting an error while generating a data secret.
+    [notes.talos]
+        title = "Talos 0.13.0"
+        description = """\
+CABPT now supports config generation for Talos 0.13.0 (and previous Talos releases).
+Talos version to generate configs for should be specified in the `talosVersion:` field.
 """
