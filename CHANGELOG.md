@@ -1,3 +1,52 @@
+## [CAPI Bootstrap Provider Talos 0.3.2](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.2) (2021-10-12)
+
+Welcome to the v0.3.2 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1alpha3
+
+This release of CABPT is compatible with CAPI v1alpha3 (v0.3.x).
+CABPT releases v0.4.x are compatible with CAPI v1alpha4 (v0.4.x).
+
+
+### Talos 0.13.0
+
+CABPT now supports config generation for Talos 0.13.0 (and previous Talos releases).
+Talos version to generate configs for should be specified in the `talosVersion:` field.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`1e36c44`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/1e36c441b31c6bd66e9c6f239bc5cc562e35c3ab) feat: update Talos machinery to 0.13.0
+</p>
+</details>
+
+### Changes from talos-systems/crypto
+<details><summary>2 commits</summary>
+<p>
+
+* [`9a63cba`](https://github.com/talos-systems/crypto/commit/9a63cba8dabd278f3080fa8c160613efc48c43f8) fix: add back support for generating ECDSA keys with P-256 and SHA512
+* [`893bc66`](https://github.com/talos-systems/crypto/commit/893bc66e4716a4cb7d1d5e66b5660ffc01f22823) fix: use SHA256 for ECDSA-P256
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/talos-systems/crypto**  v0.3.2 -> v0.3.4
+* **golang.org/x/sys**                 0f9fa26af87c -> 39ccf1dd6fa6
+
+Previous release can be found at [v0.3.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.1)
+
 ## [CAPI Bootstrap Provider Talos 0.3.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.3.1) (2021-09-29)
 
 Welcome to the v0.3.1 release of CAPI Bootstrap Provider Talos!
