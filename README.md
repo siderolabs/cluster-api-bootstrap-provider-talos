@@ -1,8 +1,8 @@
-# cluster-api-bootstrap-provider-talos
+# Cluster API Bootstrap Provider Talos (CABPT)
 
 ## Intro
 
-The Cluster API Bootstrap Provider Talos (CABPT) is a project by [Sidero Labs](https://www.siderolabs.com/) that provides a [Cluster API](https://github.com/kubernetes-sigs/cluster-api)(CAPI) bootstrap provider for use in deploying Talos-based Kubernetes nodes across any environment.
+The Cluster API Bootstrap Provider Talos (CABPT) is a project by [Sidero Labs](https://siderolabs.com/) that provides a [Cluster API](https://github.com/kubernetes-sigs/cluster-api) (CAPI) bootstrap provider for use in deploying Talos-based Kubernetes nodes across any environment.
 Given some basic info, this provider will generate bootstrap configurations for a given machine and reconcile the necessary custom resources for CAPI to pick up the generated data.
 
 ## Corequisites
@@ -10,66 +10,201 @@ Given some basic info, this provider will generate bootstrap configurations for 
 There are a few corequisites and assumptions that go into using this project:
 
 - [Cluster API](https://github.com/kubernetes-sigs/cluster-api)
+- [Talos](https://talos.dev/)
 
-## Building and Installing
+## Installing
 
-This project can be built simply by running `make release` from the root directory.
-Doing so will create a file called `_out/bootstrap-components.yaml`.
-If you wish, you can tweak settings by editing the release yaml.
-This file can then be installed into your management cluster with `kubectl apply -f _out/bootstrap-components.yaml`.
+CABPT provider should be installed alongside with [CACPPT](https://github.com/talos-systems/cluster-api-control-plane-provider-talos) provider.
 
-Note that CABPT should be deployed as part of a set of controllers for Cluster API.
-You will need at least the upstream CAPI components and an infrastructure provider for v1alpha2 CAPI capabilities.
+```shell
+clusterctl init --bootstrap talos --control-plane talos --infrastructure <infrastructure provider>
+```
+
+## Compatibility
+
+This provider's versions are compatible with the following versions of Cluster API:
+
+|                | v1alpha3 (v0.3) | v1alpha4 (v0.4) | v1beta1 (v1.0) |
+| -------------- | --------------- | --------------- | -------------- |
+| CABPT (v0.3.x) | ✓               |                 |                |
+| CABPT (v0.4.x) |                 | ✓               |                |
+| CABPT (v0.5.x) |                 |                 | ✓              |
+
+This provider's versions are able to install and manage the following versions of Kubernetes:
+
+|                | v1.16 | v 1.17 | v1.18 | v1.19 | v1.20 | v1.21 | v1.22 |
+| -------------- | ----- | ------ | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.3.x) | ✓     | ✓      | ✓     | ✓     | ✓     | ✓     |       |
+| CABPT (v0.4.x) |       |        |       | ✓     | ✓     | ✓     | ✓     |
+| CABPT (v0.5.x) |       |        |       | ✓     | ✓     | ✓     | ✓     |
+
+This provider's versions are compatible with the following versions of Talos:
+
+|                  | v0.11 | v0.12 | v0.13 |
+| ---------------- | ----- | ----- | ----- |
+| CABPT (v0.3.x)   | ✓     | ✓     | ✓     |
+| CABPT (v0.4.x)   | ✓     | ✓     | ✓     |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     |
+
+CABPT generates machine configuration compatible with Talos version specified in the `talosVersion:` field (see below).
 
 ## Usage
 
-CABPT supports a single API type, a TalosConfig.
-You can create YAML definitions of a TalosConfig and `kubectl apply` them as part of a larger CAPI cluster deployment.
-Below is a bare-minimum example.
-
-A basic config:
+CABPT is not used directly, but rather via CACPPT (`TalosControlPlane`) for control plane nodes or via `MachineDeployment` (`MachinePool`) for worker nodes.
+In either case, CABPT settings are passed via `TalosConfigTemplate` resource:
 
 ```yaml
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
-kind: TalosConfig
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
 metadata:
-  name: talos-0
-  labels:
-    cluster.x-k8s.io/cluster-name: talos
+  name: mycluster-cp
 spec:
-  generateType: init
+  controlPlaneConfig:
+    controlplane:
+      generateType: controlplane
+      talosVersion: v0.13
+  ...
 ```
 
-Note the generateType mentioned above.
-This is a required value in the spec for a TalosConfig.
-For a no-frills bootstrap config, you can simply specify `init`, `controlplane`, or `worker` depending on what type of Talos node this is.
-When creating a TalosConfig this way, you can then retrieve the talosconfig file that allows for osctl interaction with your nodes by doing something like `kubectl get talosconfig -o yaml talos-0 -o jsonpath='{.status.talosConfig}'` after creation.
-
-If you wish to do something more complex, we allow for the ability to supply an entire Talos config file to the resource.
-This can be done by setting the generateType to `none` and specifying a `data` field.
-This config file can be generated with `talosctl config generate` and the edited to supply the various options you may desire.
-This full config is blindly copied from the `data` section of the spec and presented under `.status.bootstrapData` so that the upstream CAPI controllers can see it and make use.
-
-An example of a more complex config:
-
 ```yaml
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
-kind: TalosConfig
+kind: TalosConfigTemplate
 metadata:
-  name: talos-0
-  labels:
-    cluster.x-k8s.io/cluster-name: talos
+  name: mycluster-workers
+spec:
+  template:
+    spec:
+      generateType: worker
+      talosVersion: v0.13
+```
+
+Fields available in the `TalosConfigTemplate` (and `TalosConfig`) resources:
+
+- `generateType`: Talos machine configuration type to generate (`controlplane`, `init` (deprecated), `worker`) or `none` for user-supplied configuration (see below)
+- `talosVersion`: version of Talos to generate machine configuration for (e.g. `v0.13`, patch version might be omitted).
+   CABPT defaults to the latest supported Talos version, but it can generate configuration compatible with previous versions of Talos.
+   It is recommended to always set this field explicitly to avoid issues when CABPT is upgraded to the version which supports new Talos version.
+- `configPatches` (optional): set of machine configuration patches to apply to the generated configuration.
+- `data` (only for `generateType: none`): user-supplied machine configuration.
+
+### Generated Machine Configuration
+
+When `generateType` is set to the machine type of the Talos nodes (`controlplane` for control plane nodes and `worker` for worker nodes), CABPT generates a set of cluster-wide
+secrets which are used to provision machine configuration for each node.
+Machine configuration generated is compatible with the Talos version set in the `talosVersion` field.
+
+```yaml
+spec:
+  generateType: controlplane
+  talosVersion: v0.13
+```
+
+### User-supplied Machine Configuration
+
+In this mode CABPT passes through machine configuration set in `data` field as bootstrap data to the `Machine`.
+Machine configuration can be generated with `talosctl gen config`.
+
+```yaml
 spec:
   generateType: none
   data: |
     version: v1alpha1
     machine:
-      type: init
-      token: xxxxxx
+      type: controlplane
     ...
     ...
     ...
 ```
 
-Note that specifying the full config above removes the ability for our bootstrap provider to generate a machine configuration for use.
-As such, you should keep track of the machine configuration that's generated when running `talosctl config generate`.
+### Configuration Patches
+
+Machine configuration can be customized by applying configuration patches.
+Any field of the [Talos machine configuration](https://www.talos.dev/docs/latest/reference/configuration/)
+can be overridden on a per-machine basis using this method.
+The format of these patches is based on [JSON 6902](http://jsonpatch.com/) that you may be used to in tools like `kustomize`.
+
+```yaml
+spec:
+  generateType: controlplane
+  talosVersion: v0.13
+  configPatches:
+    - op: replace
+      path: /machine/install
+      value:
+        disk: /dev/sda
+    - op: add
+      path: /cluster/network/cni
+      value:
+        name: custom
+        urls:
+          - https://docs.projectcalico.org/v3.18/manifests/calico.yaml
+```
+
+### Retrieving `talosconfig`
+
+Client-side `talosconfig` is required to access the cluster using Talos API.
+CABPT generates `talosconfig` for generated machine configuration and stores it as `<cluster>-talosconfig` secret in cluster's namespace.
+
+`talosconfig` can be retrieved with:
+
+```shell
+kubectl get secret --namespace <cluster-namespace> <cluster-name>-talosconfig -o jsonpath='{.data.talosconfig}' | base64 -d > cluster-talosconfig
+talosctl config merge cluster-talosconfig
+talosctl -n <IP> version
+```
+
+CABPT updates endpoints in the `talosconfig` based on control plane `Machine` addresses.
+
+### Operation
+
+CABPT reconciles `TalosConfig` resources.
+Once `TalosConfig` and its associated `Machine` are ready, CABPT generates machine configuration and stores it in the `<machine>-bootstrap-data` Secret.
+Kubernetes cluster CA is stored in the `<cluster>-ca` Secret.
+Cluster-wide shared secrets are stored in the `<cluster>-talos` Secret.
+Client-side Talos API configuration is stored in the `<cluster>-talosconfig` Secret.
+
+As part of its operation, CABPT sets a number of Conditions on the `TalosConfig/Status` resource:
+
+- `DataSecretAvailable`: CABPT generated machine configuration in `<machine>-bootstrap-data` Secret, CABPT unblocks infrastructure provider to boot the `Machine`.
+- `ClientConfigAvailableCondition`: CABPT generated Talos client configuration in `<cluster>-talosconfig` Secret.
+
+```shell
+$ kubectl describe talosconfig talosconfig-cp-0
+Status:
+  Conditions:
+    Last Transition Time:  2021-10-25T20:54:09Z
+    Status:                True
+    Type:                  Ready
+    Last Transition Time:  2021-10-25T20:54:09Z
+    Status:                True
+    Type:                  ClientConfigAvailable
+    Last Transition Time:  2021-10-25T20:54:09Z
+    Status:                True
+    Type:                  DataSecretAvailable
+  Data Secret Name:        cp-0-bootstrap-data
+```
+
+If CABPT fails to perform its operations, it stores error message for the respective Condition.
+
+```shell
+Status:
+  Conditions:
+    Last Transition Time:  2021-10-25T20:54:09Z
+    Message:               failure applying rfc6902 patches to talos machine config: add operation does not apply: doc is missing path: "/machine/time/servers": missing value
+    Reason:                DataSecretGenerationFailed
+    Severity:              Error
+    Status:                False
+```
+
+These statuses are also presented in the `clusterctl describe cluster --show-conditions all` output.
+
+## Building
+
+This project can be built simply by running `make release` from the root directory.
+Doing so will create a file called `_out/bootstrap-talos/<version>/bootstrap-components.yaml`.
+If you wish, you can tweak settings by editing the release yaml.
+This file can then be installed into your management cluster with `kubectl apply -f _out/bootstrap-components.yaml`.
+
+## Support
+
+Join our [Slack](https://slack.dev.talos-systems.io)!
