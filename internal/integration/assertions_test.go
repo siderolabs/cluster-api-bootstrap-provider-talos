@@ -27,9 +27,22 @@ import (
 func assertClientConfig(t *testing.T, talosConfig *bootstrapv1alpha3.TalosConfig) {
 	t.Helper()
 
-	clientConfig, err := talosclientconfig.FromString(talosConfig.Status.TalosConfig)
+	clientConfig, err := talosclientconfig.FromString(talosConfig.Status.TalosConfig) //nolint:staticcheck
 	require.NoError(t, err)
 	validateClientConfig(t, clientConfig)
+}
+
+// assertClusterClientConfig checks that Talos client config as a cluster-wide secret is valid.
+func assertClusterClientConfig(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, endpoints ...string) {
+	t.Helper()
+
+	var secret corev1.Secret
+
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name + "-talosconfig"}, &secret))
+
+	clientConfig, err := talosclientconfig.FromString(string(secret.Data["talosconfig"]))
+	require.NoError(t, err)
+	validateClientConfig(t, clientConfig, endpoints...)
 }
 
 // assertMachineConfiguration checks that generated bootstrap data is a valid Talos machine configuration.

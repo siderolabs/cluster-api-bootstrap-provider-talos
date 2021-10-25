@@ -15,6 +15,7 @@ import (
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"inet.af/netaddr"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,10 +38,11 @@ func TestIntegration(t *testing.T) {
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
 
 		assertClientConfig(t, talosConfig)
+		assertClusterClientConfig(ctx, t, c, cluster)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
@@ -58,6 +60,7 @@ func TestIntegration(t *testing.T) {
 		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
 
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
+		controlplaneMachines := []*capiv1.Machine{}
 
 		for i := 0; i < 3; i++ {
 			machineType := talosmachine.TypeInit
@@ -70,19 +73,20 @@ func TestIntegration(t *testing.T) {
 				GenerateType: machineType.String(),
 				TalosVersion: TalosVersion,
 			})
-			createMachine(ctx, t, c, cluster, talosConfig)
+			controlplaneMachines = append(controlplaneMachines, createMachine(ctx, t, c, cluster, talosConfig, true))
 
 			controlplanes = append(controlplanes, talosConfig)
 		}
 
 		workers := []*bootstrapv1alpha3.TalosConfig{}
+		workerMachines := []*capiv1.Machine{}
 
 		for i := 0; i < 4; i++ {
 			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: talosmachine.TypeWorker.String(),
 				TalosVersion: TalosVersion,
 			})
-			createMachine(ctx, t, c, cluster, talosConfig)
+			workerMachines = append(workerMachines, createMachine(ctx, t, c, cluster, talosConfig, false))
 
 			workers = append(workers, talosConfig)
 		}
@@ -104,6 +108,7 @@ func TestIntegration(t *testing.T) {
 			}
 		}
 
+		assertClusterClientConfig(ctx, t, c, cluster)
 		assertClusterCA(ctx, t, c, cluster, assertMachineConfiguration(ctx, t, c, controlplanes[0]))
 		assertControllerSecret(ctx, t, c, cluster, assertMachineConfiguration(ctx, t, c, controlplanes[0]))
 
@@ -112,6 +117,27 @@ func TestIntegration(t *testing.T) {
 
 		// compare all configs in more relaxed mode
 		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
+
+		// attach addresses to machines
+		ip := netaddr.MustParseIP("10.5.0.2")
+		expectedEndpoints := []string{}
+
+		for _, cpMachine := range controlplaneMachines {
+			expectedEndpoints = append(expectedEndpoints, ip.String())
+			patchMachineAddress(ctx, t, c, cpMachine, ip.String())
+
+			ip = ip.Next()
+		}
+
+		for _, wMachine := range workerMachines {
+			patchMachineAddress(ctx, t, c, wMachine, ip.String())
+
+			ip = ip.Next()
+		}
+
+		waitForEndpointsClusterClientConfig(ctx, t, c, cluster, len(expectedEndpoints))
+
+		assertClusterClientConfig(ctx, t, c, cluster, expectedEndpoints...)
 	})
 
 	t.Run("ClusterSpec", func(t *testing.T) {
@@ -143,7 +169,7 @@ func TestIntegration(t *testing.T) {
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -179,7 +205,7 @@ func TestIntegration(t *testing.T) {
 				},
 			},
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -212,12 +238,13 @@ func TestIntegration(t *testing.T) {
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: TalosVersion,
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
 		assertClusterCA(ctx, t, c, cluster, provider)
+		assertClusterClientConfig(ctx, t, c, cluster)
 
 		assert.Equal(t, "o19zh7.yv7rxce3lsptnme9", provider.Machine().Security().Token())
 		assert.Equal(t, "5dwzrh", provider.Cluster().Token().ID())
@@ -241,7 +268,6 @@ func TestIntegration(t *testing.T) {
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 4; i++ {
-
 			machineconfig, err := generate.Config(talosmachine.TypeWorker, input)
 			require.NoError(t, err)
 
@@ -252,7 +278,7 @@ func TestIntegration(t *testing.T) {
 				GenerateType: "none",
 				Data:         string(configdata),
 			})
-			createMachine(ctx, t, c, cluster, talosConfig)
+			createMachine(ctx, t, c, cluster, talosConfig, true)
 
 			workers = append(workers, talosConfig)
 		}
@@ -260,7 +286,6 @@ func TestIntegration(t *testing.T) {
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 3; i++ {
-
 			machineType := talosmachine.TypeInit
 
 			if i > 0 {
@@ -277,15 +302,13 @@ func TestIntegration(t *testing.T) {
 				GenerateType: "none",
 				Data:         string(configdata),
 			})
-			createMachine(ctx, t, c, cluster, talosConfig)
+			createMachine(ctx, t, c, cluster, talosConfig, false)
 
 			controlplanes = append(controlplanes, talosConfig)
 		}
 
 		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
 			waitForReady(ctx, t, c, talosConfig)
-
-			// Note, for config type none we don't generate talosconfig (why?)
 
 			provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
@@ -296,6 +319,11 @@ func TestIntegration(t *testing.T) {
 				assert.Equal(t, talosmachine.TypeControlPlane, provider.Machine().Type())
 			default:
 				assert.Equal(t, talosmachine.TypeWorker, provider.Machine().Type())
+			}
+
+			if provider.Machine().Type() != talosmachine.TypeWorker {
+				// with user config, can only generate config for controlplane nodes
+				assertClientConfig(t, talosConfig)
 			}
 		}
 
@@ -316,7 +344,7 @@ func TestIntegration(t *testing.T) {
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 
 		// assert that controller reports condition
 
@@ -352,6 +380,7 @@ func TestIntegration(t *testing.T) {
 		waitForReady(ctx, t, c, talosConfig)
 
 		assertClientConfig(t, talosConfig)
+		assertClusterClientConfig(ctx, t, c, cluster)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
@@ -380,7 +409,7 @@ func TestIntegration(t *testing.T) {
 				},
 			},
 		})
-		createMachine(ctx, t, c, cluster, talosConfig)
+		createMachine(ctx, t, c, cluster, talosConfig, true)
 
 		// assert that controller reports failure condition
 		for ctx.Err() == nil {

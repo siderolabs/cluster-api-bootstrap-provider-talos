@@ -12,6 +12,7 @@ require (
 	github.com/talos-systems/talos/pkg/machinery v0.13.0
 	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
 	gopkg.in/yaml.v2 v2.4.0
+	inet.af/netaddr v0.0.0-20210903134321-85fa6c94624e
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.22.2
@@ -28,6 +29,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/containerd/go-cni v1.1.0 // indirect
 	github.com/containernetworking/cni v1.0.1 // indirect
+	github.com/coredns/caddy v1.1.0 // indirect
+	github.com/coredns/corefile-migration v1.0.13 // indirect
 	github.com/cosi-project/runtime v0.0.0-20210906201716-5cb7f5002d77 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -84,6 +87,8 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
+	go4.org/intern v0.0.0-20210108033219-3eb7198706b2 // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20201222180813-1025295fd063 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect

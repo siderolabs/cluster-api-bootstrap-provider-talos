@@ -118,12 +118,18 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 			t.Logf("Deleting namespace %q ...", namespace)
 			assert.NoError(t, c.Delete(context.Background(), ns, opts)) // not ctx because it can be already canceled
 
+			iteration := -1
+
 			for {
+				iteration++
+
 				var obj corev1.Namespace
 
 				err = c.Get(context.Background(), types.NamespacedName{Name: namespace}, &obj)
 				if err == nil {
-					t.Log("Waiting for ns deletion", namespace)
+					if iteration%10 == 0 {
+						t.Log("Waiting for ns deletion", namespace)
+					}
 
 					// a bit of black magic here:
 					//   as we don't set infrastructureRef on machines, capi controller will hang forever
@@ -143,7 +149,9 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 
 						if err = c.Update(context.Background(), &machine); err != nil {
 							// conflicts might be ignored here, as eventually this will succeed
-							t.Log("error updating machine's finalizers", err)
+							if !apierrors.IsConflict(err) {
+								t.Log("error updating machine's finalizers", err)
+							}
 						}
 					}
 
