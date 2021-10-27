@@ -1,3 +1,42 @@
+## [CAPI Bootstrap Provider Talos 0.4.2](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.2) (2021-10-27)
+
+Welcome to the v0.4.2 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1alpha4
+
+CABPT v0.4.x supports CAPI v1alpha4.
+
+
+### `talosconfig` Generation
+
+CABPT now generates client-side Talos API credentials (`talosconfig`) in the `<cluster>-talosconfig` Secret.
+Generated `talosconfig` will be updated with the endpoints of the control plane `Machine`s.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`00c2bd4`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/00c2bd4338de4a2ccbd1360aba3ebed4c8c562c9) docs: update README with usage and compatibility matrix
+* [`f797aa6`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/f797aa6535355a57578a41c2281001f4d1765d3f) feat: generate talosconfig as a secret with proper endpoints
+</p>
+</details>
+
+### Dependency Changes
+
+* **inet.af/netaddr**  85fa6c94624e **_new_**
+
+Previous release can be found at [v0.4.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.1)
+
 ## [CAPI Bootstrap Provider Talos 0.4.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.1) (2021-10-12)
 
 Welcome to the v0.4.1 release of CAPI Bootstrap Provider Talos!
