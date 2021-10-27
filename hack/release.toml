@@ -20,3 +20,10 @@ preface = """\
         description = """\
 CABPT now supports CAPI version 1.0.x (v1beta1).
 """
+
+    [notes.talosconfig]
+        title = "`talosconfig` Generation"
+        description = """\
+CABPT now generates client-side Talos API credentials (`talosconfig`) in the `<cluster>-talosconfig` Secret.
+Generated `talosconfig` will be updated with the endpoints of the control plane `Machine`s.
+"""

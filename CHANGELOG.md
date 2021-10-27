@@ -1,3 +1,62 @@
+## [CAPI Bootstrap Provider Talos 0.5.0-alpha.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.0-alpha.0) (2021-10-27)
+
+Welcome to the v0.5.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
+*This is a pre-release of CAPI Bootstrap Provider Talos*
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1beta1
+
+CABPT now supports CAPI version 1.0.x (v1beta1).
+
+
+### `talosconfig` Generation
+
+CABPT now generates client-side Talos API credentials (`talosconfig`) in the `<cluster>-talosconfig` Secret.
+Generated `talosconfig` will be updated with the endpoints of the control plane `Machine`s.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>4 commits</summary>
+<p>
+
+* [`d124c07`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/d124c072c9db8d402b353a73646d2d197bae76a4) docs: update README with usage and compatibility matrix
+* [`20792f3`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/20792f345b7ff3c8ffa9d65c9ca8dcab1932f49e) feat: generate talosconfig as a secret with proper endpoints
+* [`abd206f`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/abd206fd8a98f5478f8ffd0f8686e32be3b7defe) feat: update to CAPI v1.0.x contract (v1beta1)
+* [`b7faf9e`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/b7faf9e730b7c9f50ffa94be194ddcf908708a2c) feat: update Talos machinery to 0.13.0
+</p>
+</details>
+
+### Changes from talos-systems/crypto
+<details><summary>2 commits</summary>
+<p>
+
+* [`9a63cba`](https://github.com/talos-systems/crypto/commit/9a63cba8dabd278f3080fa8c160613efc48c43f8) fix: add back support for generating ECDSA keys with P-256 and SHA512
+* [`893bc66`](https://github.com/talos-systems/crypto/commit/893bc66e4716a4cb7d1d5e66b5660ffc01f22823) fix: use SHA256 for ECDSA-P256
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/talos-systems/crypto**  v0.3.2 -> v0.3.4
+* **golang.org/x/sys**                 bfb29a6856f2 -> 39ccf1dd6fa6
+* **inet.af/netaddr**                  85fa6c94624e **_new_**
+* **k8s.io/api**                       v0.21.4 -> v0.22.2
+* **k8s.io/apiextensions-apiserver**   v0.21.4 -> v0.22.2
+* **k8s.io/apimachinery**              v0.21.4 -> v0.22.2
+* **k8s.io/client-go**                 v0.21.4 -> v0.22.2
+* **sigs.k8s.io/cluster-api**          v0.4.3 -> v1.0.0
+* **sigs.k8s.io/controller-runtime**   v0.9.7 -> v0.10.2
+
+Previous release can be found at [v0.4.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.0)
+
 ## [CAPI Bootstrap Provider Talos 0.4.0-alpha.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.4.0-alpha.0) (2021-10-01)
 
 Welcome to the v0.4.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
