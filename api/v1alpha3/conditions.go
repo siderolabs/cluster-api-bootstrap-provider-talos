@@ -30,3 +30,13 @@ const (
 	// and user intervention is required to get them fixed.
 	DataSecretGenerationFailedReason = "DataSecretGenerationFailed"
 )
+
+const (
+	// ClientConfigAvailableCondition documents the status of the client config generation process.
+	ClientConfigAvailableCondition capiv1.ConditionType = "ClientConfigAvailable"
+
+	// ClientConfigGenerationFailedReason (Severity=Warning) documents a TalosConfig controller detecting
+	// an error while generating a client config; those kind of errors are usually due to misconfigurations
+	// and user intervention is required to get them fixed.
+	ClientConfigGenerationFailedReason = "ClientConfigGenerationFailed"
+)

@@ -6,12 +6,12 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
@@ -21,6 +21,7 @@ import (
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"github.com/talos-systems/talos/pkg/machinery/constants"
+	"github.com/talos-systems/talos/pkg/machinery/role"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +30,7 @@ import (
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -68,18 +70,6 @@ type TalosConfigScope struct {
 type TalosConfigBundle struct {
 	BootstrapData string
 	TalosConfig   string
-}
-
-type talosConfig struct {
-	Context  string
-	Contexts map[string]*talosConfigContext
-}
-
-type talosConfigContext struct {
-	Target string
-	CA     string
-	Crt    string
-	Key    string
 }
 
 func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
@@ -148,6 +138,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	// Always attempt to Patch the TalosConfig object and status after each reconciliation.
 	defer func() {
 		// always update the readyCondition; the summary is represented using the "1 of x completed" notation.
@@ -156,7 +147,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				bootstrapv1alpha3.DataSecretAvailableCondition,
 			),
 		)
-		// Patch ObservedGeneration only if the reconciliation completed successfully
+
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{
 				Conditions: []capiv1.ConditionType{
@@ -164,6 +155,8 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				},
 			},
 		}
+
+		// Patch ObservedGeneration only if the reconciliation completed successfully
 		if rerr == nil {
 			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
 		}
@@ -214,11 +207,32 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	if annotations.IsPaused(cluster, config) {
+		log.Info("Reconciliation is paused for this object")
+		return ctrl.Result{}, nil
+	}
+
+	tcScope := &TalosConfigScope{
+		Config:      config,
+		ConfigOwner: owner,
+		Cluster:     cluster,
+	}
+
 	// bail super early if it's already ready
 	if config.Status.Ready {
 		log.Info("ignoring an already ready config")
 		conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
-		return ctrl.Result{}, nil
+
+		// reconcile cluster-wide talosconfig
+		err = r.reconcileClientConfig(ctx, log, tcScope)
+
+		if err == nil {
+			conditions.MarkTrue(config, bootstrapv1alpha3.ClientConfigAvailableCondition)
+		} else {
+			conditions.MarkFalse(config, bootstrapv1alpha3.ClientConfigAvailableCondition, bootstrapv1alpha3.ClientConfigGenerationFailedReason, capiv1.ConditionSeverityError, "talosconfig generation failure: %s", err)
+		}
+
+		return ctrl.Result{}, err
 	}
 
 	// Wait patiently for the infrastructure to be ready
@@ -237,12 +251,6 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
 
 		return ctrl.Result{}, nil
-	}
-
-	tcScope := &TalosConfigScope{
-		Config:      config,
-		ConfigOwner: owner,
-		Cluster:     cluster,
 	}
 
 	if err = r.reconcileGenerate(ctx, tcScope); err != nil {
@@ -341,7 +349,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 	}
 
 	config.Status.DataSecretName = &dataSecretName
-	config.Status.TalosConfig = retData.TalosConfig
+	config.Status.TalosConfig = retData.TalosConfig //nolint:staticcheck // deprecated, for backwards compatibility only
 
 	return nil
 }
@@ -352,17 +360,29 @@ func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *boo
 	return ctrl.Result{}, nil
 }
 
-func genTalosConfigFile(clusterName string, certs *generate.Certs) (string, error) {
-	talosConfig := &talosConfig{
-		Context: clusterName,
-		Contexts: map[string]*talosConfigContext{
-			clusterName: {
-				Target: "",
-				CA:     base64.StdEncoding.EncodeToString(certs.OS.Crt),
-				Crt:    base64.StdEncoding.EncodeToString(certs.Admin.Crt),
-				Key:    base64.StdEncoding.EncodeToString(certs.Admin.Key),
-			},
+func genTalosConfigFile(clusterName string, bundle *generate.SecretsBundle, endpoints []string) (string, error) {
+	in := &generate.Input{
+		ClusterName: clusterName,
+		Certs: &generate.Certs{
+			OS: bundle.Certs.OS,
 		},
+	}
+
+	var err error
+
+	in.Certs.Admin, err = generate.NewAdminCertificateAndKey(
+		bundle.Clock.Now(),
+		bundle.Certs.OS,
+		role.MakeSet(role.Admin),
+		87600*time.Hour,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	talosConfig, err := generate.Talosconfig(in, generate.WithEndpointList(endpoints))
+	if err != nil {
+		return "", err
 	}
 
 	talosConfigBytes, err := yaml.Marshal(talosConfig)
@@ -397,6 +417,15 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 	}
 
 	retBundle.BootstrapData = userConfigStr
+
+	if userConfig.Machine().Security().CA() != nil && len(userConfig.Machine().Security().CA().Crt) > 0 && len(userConfig.Machine().Security().CA().Key) > 0 {
+		bundle := generate.NewSecretsBundleFromConfig(generate.NewClock(), userConfig)
+
+		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.Cluster().Name(), bundle, nil)
+		if err != nil {
+			r.Log.Error(err, "failed generating talosconfig for user-supplied machine configuration")
+		}
+	}
 
 	return retBundle, nil
 }
@@ -453,7 +482,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions = append(genOptions, generate.WithVersionContract(versionContract))
 
-	secretBundle, err := r.getSecretsBundle(ctx, scope, scope.Cluster.Name+"-talos", genOptions...)
+	secretBundle, err := r.getSecretsBundle(ctx, scope, true, genOptions...)
 	if err != nil {
 		return retBundle, err
 	}
@@ -476,7 +505,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, err
 	}
 
-	tcString, err := genTalosConfigFile(input.ClusterName, input.Certs)
+	tcString, err := genTalosConfigFile(input.ClusterName, secretBundle, nil)
 	if err != nil {
 		return retBundle, err
 	}

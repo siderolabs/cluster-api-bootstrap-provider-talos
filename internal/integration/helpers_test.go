@@ -19,10 +19,12 @@ import (
 	talosclient "github.com/talos-systems/talos/pkg/machinery/client"
 	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
 	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
+	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -96,14 +98,23 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 }
 
 // createMachine creates a Machine owned by the Cluster.
-func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, talosconfig *bootstrapv1alpha3.TalosConfig) *capiv1.Machine {
+func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, talosconfig *bootstrapv1alpha3.TalosConfig, controlplane bool) *capiv1.Machine {
 	t.Helper()
+
+	labels := map[string]string{
+		capiv1.ClusterLabelName: cluster.Name,
+	}
+
+	if controlplane {
+		labels[capiv1.MachineControlPlaneLabelName] = ""
+	}
 
 	machineName := generateName(t, "machine")
 	machine := &capiv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cluster.Namespace,
 			Name:      machineName,
+			Labels:    labels,
 		},
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
@@ -122,6 +133,23 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 	require.NoError(t, c.Create(ctx, machine))
 
 	return machine
+}
+
+// patchMachineAddress adds an address to the machine.
+func patchMachineAddress(ctx context.Context, t *testing.T, c client.Client, machine *capiv1.Machine, addr string) {
+	t.Helper()
+
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(machine), machine))
+
+	patchHelper, err := patch.NewHelper(machine, c)
+	require.NoError(t, err)
+
+	machine.Status.Addresses = append(machine.Status.Addresses, capiv1.MachineAddress{
+		Type:    capiv1.MachineExternalIP,
+		Address: addr,
+	})
+
+	require.NoError(t, patchHelper.Patch(ctx, machine))
 }
 
 // createTalosConfig creates a TalosConfig owned by the Machine.
@@ -154,12 +182,12 @@ func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, names
 func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1alpha3.TalosConfig) {
 	t.Helper()
 
-	for ctx.Err() == nil {
-		key := types.NamespacedName{
-			Namespace: talosConfig.Namespace,
-			Name:      talosConfig.Name,
-		}
+	key := types.NamespacedName{
+		Namespace: talosConfig.Namespace,
+		Name:      talosConfig.Name,
+	}
 
+	for ctx.Err() == nil {
 		err := c.Get(ctx, key, talosConfig)
 		require.NoError(t, err)
 
@@ -170,10 +198,61 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		t.Log("Waiting ...")
 		sleepCtx(ctx, 3*time.Second)
 	}
+
+	if ctx.Err() != nil {
+		return
+	}
+
+	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+
+	if talosConfig.Spec.GenerateType == talosmachine.TypeInit.String() || talosConfig.Spec.GenerateType == talosmachine.TypeControlPlane.String() {
+		// wait for additional condition
+
+		for ctx.Err() == nil {
+			err := c.Get(ctx, key, talosConfig)
+			require.NoError(t, err)
+
+			if conditions.IsTrue(talosConfig, bootstrapv1alpha3.ClientConfigAvailableCondition) {
+				break
+			}
+
+			t.Log("Waiting for talosconfig...")
+			sleepCtx(ctx, 3*time.Second)
+		}
+	}
+}
+
+// waitForEndpointsClusterClientConfig waits for cluster-wide talosconfig to have a number of endpoints.
+func waitForEndpointsClusterClientConfig(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, numEndpoints int) {
+	t.Helper()
+
+	var secret corev1.Secret
+
+	key := client.ObjectKey{
+		Namespace: cluster.Namespace,
+		Name:      cluster.Name + "-talosconfig",
+	}
+
+	for ctx.Err() == nil {
+		err := c.Get(ctx, key, &secret)
+		require.NoError(t, err)
+
+		clientConfig, err := talosclientconfig.FromString(string(secret.Data["talosconfig"]))
+		require.NoError(t, err)
+
+		require.NotNil(t, clientConfig.Contexts[clientConfig.Context])
+
+		if len(clientConfig.Contexts[clientConfig.Context].Endpoints) == numEndpoints {
+			break
+		}
+
+		t.Logf("Waiting for %d endpoints...", numEndpoints)
+		sleepCtx(ctx, time.Second)
+	}
 }
 
 // validateClientConfig validates talosctl configuration.
-func validateClientConfig(t *testing.T, config *talosclientconfig.Config) *talosclient.Credentials {
+func validateClientConfig(t *testing.T, config *talosclientconfig.Config, endpoints ...string) *talosclient.Credentials {
 	t.Helper()
 
 	assert.Len(t, config.Contexts, 1)
@@ -181,7 +260,11 @@ func validateClientConfig(t *testing.T, config *talosclientconfig.Config) *talos
 	context := config.Contexts[config.Context]
 	require.NotNil(t, context)
 
-	assert.Empty(t, context.Endpoints)
+	if endpoints == nil {
+		endpoints = []string{}
+	}
+
+	assert.Equal(t, endpoints, context.Endpoints)
 	assert.Empty(t, context.Nodes)
 	creds, err := talosclient.CredentialsFromConfigContext(context)
 	require.NoError(t, err)

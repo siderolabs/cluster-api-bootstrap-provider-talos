@@ -7,14 +7,18 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sort"
 
+	"github.com/go-logr/logr"
 	"github.com/talos-systems/crypto/x509"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
+	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/collections"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
@@ -35,14 +39,20 @@ func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstr
 }
 
 // getSecretsBundle either generates or loads existing secret.
-func (r *TalosConfigReconciler) getSecretsBundle(ctx context.Context, scope *TalosConfigScope, secretName string, opts ...generate.GenOption) (*generate.SecretsBundle, error) {
+func (r *TalosConfigReconciler) getSecretsBundle(ctx context.Context, scope *TalosConfigScope, allowGenerate bool, opts ...generate.GenOption) (*generate.SecretsBundle, error) {
 	var secretsBundle *generate.SecretsBundle
+
+	secretName := scope.Cluster.Name + "-talos"
 
 retry:
 	secret, err := r.fetchSecret(ctx, scope.Config, secretName)
 
 	switch {
 	case err != nil && k8serrors.IsNotFound(err):
+		if !allowGenerate {
+			return nil, fmt.Errorf("secrets bundle is missing")
+		}
+
 		// no cluster secret yet, generate new one
 		secretsBundle, err = generate.NewSecretsBundle(generate.NewClock(), opts...)
 		if err != nil {
@@ -189,4 +199,81 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 	err = r.Client.Create(ctx, certSecret)
 
 	return dataSecretName, err
+}
+
+// reconcileClientConfig creates/updates a TalosConfig for the cluster.
+func (r *TalosConfigReconciler) reconcileClientConfig(ctx context.Context, log logr.Logger, scope *TalosConfigScope) error {
+	if !(scope.Config.Spec.GenerateType == talosmachine.TypeControlPlane.String() || scope.Config.Spec.GenerateType == talosmachine.TypeInit.String()) {
+		// can only reconcile for control plane machines
+		return nil
+	}
+
+	machines, err := collections.GetFilteredMachinesForCluster(ctx, r.Client, scope.Cluster, collections.ControlPlaneMachines(scope.Cluster.Name))
+	if err != nil {
+		return fmt.Errorf("failed getting control plane machines: %w", err)
+	}
+
+	var endpoints []string
+
+	for _, machine := range machines {
+		for _, addr := range machine.Status.Addresses {
+			if addr.Type == capiv1.MachineExternalIP || addr.Type == capiv1.MachineInternalIP {
+				endpoints = append(endpoints, addr.Address)
+			}
+		}
+	}
+
+	sort.Strings(endpoints)
+
+	secretBundle, err := r.getSecretsBundle(ctx, scope, false)
+	if err != nil {
+		return err
+	}
+
+	talosConfig, err := genTalosConfigFile(scope.Cluster.Name, secretBundle, endpoints)
+	if err != nil {
+		return err
+	}
+
+	// Create or update talosconfig secret
+	dataSecretName := scope.Cluster.GetName() + "-talosconfig"
+
+	log.Info("updating talosconfig", "endpoints", endpoints, "secret", dataSecretName)
+
+	configSecret := &corev1.Secret{}
+
+	err = r.Client.Get(ctx, client.ObjectKey{Namespace: scope.Cluster.Namespace, Name: dataSecretName}, configSecret)
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("error fetching secret: %w", err)
+		}
+
+		configSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: scope.Cluster.Namespace,
+				Name:      dataSecretName,
+				Labels: map[string]string{
+					capiv1.ClusterLabelName: scope.Cluster.Name,
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
+				},
+			},
+			Data: map[string][]byte{
+				"talosconfig": []byte(talosConfig),
+			},
+		}
+
+		return r.Client.Create(ctx, configSecret)
+	}
+
+	configSecret.Data["talosconfig"] = []byte(talosConfig)
+
+	err = r.Client.Update(ctx, configSecret)
+	if k8serrors.IsConflict(err) {
+		// ignore conflict errors, probably another reconcile fixed up the endpoints
+		err = nil
+	}
+
+	return err
 }

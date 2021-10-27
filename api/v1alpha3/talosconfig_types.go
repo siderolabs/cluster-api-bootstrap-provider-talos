@@ -32,7 +32,10 @@ type TalosConfigStatus struct {
 	// +optional
 	DataSecretName *string `json:"dataSecretName,omitempty"`
 
-	// Talos config will be a string containing the config for download
+	// Talos config will be a string containing the config for download.
+	//
+	// Deprecated: please use `<cluster>-talosconfig` secret.
+	//
 	// +optional
 	TalosConfig string `json:"talosConfig,omitempty"`
 

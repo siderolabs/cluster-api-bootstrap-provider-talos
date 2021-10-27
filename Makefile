@@ -7,6 +7,7 @@ REGISTRY_AND_USERNAME := $(REGISTRY)/$(USERNAME)
 NAME := cluster-api-talos-controller
 
 ARTIFACTS := _out
+TEST_RUN ?= ./...
 
 TOOLS ?= ghcr.io/talos-systems/tools:v0.8.0-alpha.0-3-g2790b55
 PKGS ?= v0.8.0
@@ -130,7 +131,7 @@ conformance:  ## Performs policy checks against the commit and source code.
 # Make `make test` behave just like `go test` regarding relative paths.
 test:  ## Run tests.
 	@$(MAKE) local-integration-test DEST=./internal/integration PLATFORM=linux/amd64
-	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../coverage.txt
+	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../coverage.txt -test.run $(TEST_RUN)
 
 coverage:  ## Upload coverage data to codecov.io.
 	/usr/local/bin/codecov -f coverage.txt -X fix
