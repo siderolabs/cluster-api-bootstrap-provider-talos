@@ -33,6 +33,7 @@ steps:
       PLATFORM: linux/amd64,linux/arm64
     commands:
       - make
+      - make check-dirty
     when:
       event:
         include:
@@ -116,6 +117,7 @@ steps:
     pull: always
     commands:
       - make release
+      - make check-dirty
     when:
       event:
         - tag
@@ -181,6 +183,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 405eea502f51dfc9368f81971ca97c96ac99f5fff6ddc1afa613894e80dd67c2
+hmac: 08c8794304be76a3ddf7d3fd138b79c792dd747c9d57004e7836363fb0985e32
 
 ...

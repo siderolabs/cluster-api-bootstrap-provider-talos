@@ -182,8 +182,9 @@ spec:
                   consumed
                 type: boolean
               talosConfig:
-                description: Talos config will be a string containing the config for
-                  download
+                description: "Talos config will be a string containing the config
+                  for download. \n Deprecated: please use `<cluster>-talosconfig`
+                  secret."
                 type: string
             type: object
         type: object
