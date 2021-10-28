@@ -125,6 +125,9 @@ run: install ## Run the controller locally. This is for testing purposes only.
 clean:
 	@rm -rf $(ARTIFACTS)
 
+check-dirty: ## Verifies that source tree is not dirty
+	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; exit 1 ; fi
+
 conformance:  ## Performs policy checks against the commit and source code.
 	docker run --rm -it -v $(PWD):/src -w /src ghcr.io/talos-systems/conform:v0.1.0-alpha.23 enforce
 
