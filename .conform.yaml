@@ -25,7 +25,9 @@ policies:
           - style
           - test
           - release
-        scopes: []
+        scopes:
+          - ^v0.4
+          - ^v0.5
   - type: license
     spec:
       skipPaths:
