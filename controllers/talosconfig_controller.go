@@ -469,7 +469,6 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions := []generate.GenOption{generate.WithDNSDomain(clusterDNS)}
 
-	// default version contract to v0.8 unless user specifies something different.
 	versionContract := defaultVersionContract
 
 	if scope.Config.Spec.TalosVersion != "" {

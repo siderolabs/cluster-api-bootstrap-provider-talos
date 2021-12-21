@@ -236,7 +236,7 @@ func TestIntegration(t *testing.T) {
 
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
-			TalosVersion: TalosVersion,
+			TalosVersion: "v0.13",
 		})
 		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
