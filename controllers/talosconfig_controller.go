@@ -336,7 +336,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 			return err
 		}
 
-		if machine.Spec.InfrastructureRef.Name == "PacketMachine" {
+		if machine.Spec.InfrastructureRef.Kind == "PacketMachine" {
 			retData.BootstrapData = "#!talos\n" + retData.BootstrapData
 		}
 	}
