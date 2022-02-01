@@ -6,8 +6,11 @@ package integration
 
 import (
 	"context"
+	"net"
+	"net/url"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +29,12 @@ import (
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientcfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -51,7 +56,6 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 		t.Cleanup(stop)
 		go func() {
 			<-ctx.Done()
-			t.Log("Stopping...")
 			stop()
 		}()
 
@@ -69,14 +73,19 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	}))
 
 	installCAPI(ctx, t)
-	restCfg := startTestEnv(ctx, t)
+	restCfg, testEnv := startTestEnv(ctx, t)
 
 	c, err := client.New(restCfg, client.Options{})
 	require.NoError(t, err)
 
 	waitForCAPIAvailability(ctx, t, c)
 
-	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{})
+	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
+		MetricsBindAddress: "0",
+		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
+		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
+		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
+	})
 	require.NoError(t, err)
 
 	err = (&controllers.TalosConfigReconciler{
@@ -86,9 +95,16 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10})
 	require.NoError(t, err)
 
+	err = (&bootstrapv1alpha3.TalosConfig{}).SetupWebhookWithManager(mgr)
+	require.NoError(t, err)
+
 	go func() {
 		assert.NoError(t, mgr.Start(ctx))
 	}()
+
+	<-mgr.Elected()
+
+	waitForWebhooks(ctx, t, testEnv)
 
 	t.Log("Setup done.")
 
@@ -182,7 +198,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 	// t.FailNow() should be called in the main goroutine.
 	initErr := make(chan error, 1)
 	go func() {
-		clusterctlClient, err := clusterctlclient.New("")
+		clusterctlClient, err := clusterctlclient.New("../../hack/clusterctl.yaml")
 		if err != nil {
 			initErr <- err
 			return
@@ -222,10 +238,24 @@ func installCAPI(ctx context.Context, t *testing.T) {
 // startTestEnv starts envtest environment: installs CRDs, etc.
 //
 // Context cancelation is honored.
-func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
+func startTestEnv(ctx context.Context, t *testing.T) (*rest.Config, *envtest.Environment) {
 	t.Helper()
 
+	cfg, err := clientcfg.GetConfig()
+	require.NoError(t, err)
+
+	u, err := url.Parse(cfg.Host)
+	require.NoError(t, err)
+
+	// this is pure hack to support docker-based clusters
+	// Docker says control plane endpoint is https://10.5.0.2:6443 (which is first node address)
+	// we need 10.5.0.1 which is the bridge IP, which should be available both for the test and for the API server
+	if u.Hostname() == "10.5.0.2" {
+		u.Host = "10.5.0.1"
+	}
+
 	testEnv := &envtest.Environment{
+		Config:            cfg,
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", Artifacts, "bootstrap-talos", Tag)},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			ErrorIfPathMissing: true,
@@ -234,10 +264,10 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 			CleanUpAfterUse:    !skipCleanup,
 		},
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			// TODO paths?
-
-			MaxTime:      10 * time.Second,
-			PollInterval: time.Second,
+			Paths:            []string{"../../config/webhook/manifests.yaml"},
+			MaxTime:          10 * time.Second,
+			LocalServingHost: u.Hostname(),
+			PollInterval:     time.Second,
 		},
 		ErrorIfCRDPathMissing: true,
 		UseExistingCluster:    pointer.ToBool(true),
@@ -280,7 +310,37 @@ func startTestEnv(ctx context.Context, t *testing.T) *rest.Config {
 	require.NoError(t, res.err, "failed to start test-env")
 
 	t.Logf("Test-env started: %s.", res.cfg.Host)
-	return res.cfg
+	return res.cfg, testEnv
+}
+
+func waitForWebhooks(ctx context.Context, t *testing.T, testEnv *envtest.Environment) {
+	host := testEnv.WebhookInstallOptions.LocalServingHost
+	port := testEnv.WebhookInstallOptions.LocalServingPort
+
+	t.Logf("Waiting for webhook port %d to be open prior to running tests", port)
+
+	timeout := 1 * time.Second
+
+	for {
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			t.Fatalf("Failed to wait for webhook availability: %s.", ctx.Err())
+		}
+
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), timeout)
+		if err != nil {
+			t.Logf("Webhook port is not ready, will retry in %v: %s", timeout, err)
+
+			continue
+		}
+
+		conn.Close() //nolint:errcheck
+
+		t.Logf("Webhook port is now open. Continuing with tests...")
+
+		break
+	}
 }
 
 // waitForCAPIAvailability waits for needed CAPI components availability.

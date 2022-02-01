@@ -18,6 +18,7 @@ import (
 	"inet.af/netaddr"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -436,6 +437,52 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t,
 			"failure applying rfc6902 patches to talos machine config: add operation does not apply: doc is missing path: \"/machine/time/servers\": missing value",
 			conditions.GetMessage(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+	})
+	t.Run("HostnameFromMachineName", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, &capiv1.ClusterSpec{
+			ControlPlaneEndpoint: capiv1.APIEndpoint{
+				Host: "example.com",
+				Port: 443,
+			},
+		}, true)
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeControlPlane.String(),
+			TalosVersion: TalosVersion,
+			Hostname: bootstrapv1alpha3.HostnameSpec{
+				Source: bootstrapv1alpha3.HostnameSourceMachineName,
+			},
+		})
+		machine := createMachine(ctx, t, c, cluster, talosConfig, true)
+		waitForReady(ctx, t, c, talosConfig)
+
+		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+		assert.Equal(t, machine.Name, provider.Machine().Network().Hostname())
+	})
+	t.Run("TalosConfigValidate", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+
+		talosConfigName := generateName(t, "talosconfig")
+		talosConfig := &bootstrapv1alpha3.TalosConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespaceName,
+				Name:      talosConfigName,
+			},
+			Spec: bootstrapv1alpha3.TalosConfigSpec{
+				Hostname: bootstrapv1alpha3.HostnameSpec{
+					Source: "foo",
+				},
+			},
+		}
+
+		err := c.Create(ctx, talosConfig)
+		require.Error(t, err)
+		assert.True(t, apierrors.IsInvalid(err))
 	})
 }
 

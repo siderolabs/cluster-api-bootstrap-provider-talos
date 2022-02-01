@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	// +kubebuilder:scaffold:imports
 )
@@ -463,7 +464,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	}
 
 	clusterDNS := constants.DefaultDNSDomain
-	if scope.Cluster.Spec.ClusterNetwork.ServiceDomain != "" {
+	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.ServiceDomain != "" {
 		clusterDNS = scope.Cluster.Spec.ClusterNetwork.ServiceDomain
 	}
 
@@ -516,11 +517,19 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, err
 	}
 
-	if scope.Cluster.Spec.ClusterNetwork.Pods != nil {
+	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.Pods != nil {
 		data.ClusterConfig.ClusterNetwork.PodSubnet = scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
 	}
-	if scope.Cluster.Spec.ClusterNetwork.Services != nil {
+	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.Services != nil {
 		data.ClusterConfig.ClusterNetwork.ServiceSubnet = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
+	}
+
+	if !scope.ConfigOwner.IsMachinePool() && scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
+		if data.MachineConfig.MachineNetwork == nil {
+			data.MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
+		}
+
+		data.MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
 	}
 
 	dataOut, err := data.String()

@@ -8,16 +8,13 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta1
   clientConfig:
-    caBundle: Cg==
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha3-talosconfig
+      path: /validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfig
   failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: validation.talosconfig.bootstrap.cluster.x-k8s.io
+  name: vtalosconfig.cluster.x-k8s.io
   rules:
   - apiGroups:
     - bootstrap.cluster.x-k8s.io
@@ -26,6 +23,7 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
+    - DELETE
     resources:
-    - talosconfig
+    - talosconfigs
   sideEffects: None

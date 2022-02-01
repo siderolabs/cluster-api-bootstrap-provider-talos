@@ -86,6 +86,8 @@ Fields available in the `TalosConfigTemplate` (and `TalosConfig`) resources:
    It is recommended to always set this field explicitly to avoid issues when CABPT is upgraded to the version which supports new Talos version.
 - `configPatches` (optional): set of machine configuration patches to apply to the generated configuration.
 - `data` (only for `generateType: none`): user-supplied machine configuration.
+- `hostname` (optional): configure hostname in the generate machine configuration:
+  - `source` (`MachineName`): set the hostname in the generated machine configuration to the `Machine` name (not supported with `MachinePool` deployments)
 
 ### Generated Machine Configuration
 

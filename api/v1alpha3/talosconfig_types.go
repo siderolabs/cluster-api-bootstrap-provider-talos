@@ -20,7 +20,23 @@ type TalosConfigSpec struct {
 	GenerateType  string          `json:"generateType"`           //none,init,controlplane,worker mutually exclusive w/ data
 	Data          string          `json:"data,omitempty"`
 	ConfigPatches []ConfigPatches `json:"configPatches,omitempty"`
+	// Set hostname in the machine configuration to some value.
+	Hostname HostnameSpec `json:"hostname,omitempty"`
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+// HostnameSource is the definition of hostname source.
+type HostnameSource string
+
+// HostnameSourceMachineName sets the hostname in the generated configuration to the machine name.
+const HostnameSourceMachineName HostnameSource = "MachineName"
+
+// HostnameSpec defines the hostname source.
+type HostnameSpec struct {
+	// Source of the hostname.
+	//
+	// Allowed values: "MachineName" (use linked Machine's Name).
+	Source HostnameSource `json:"source,omitempty"`
 }
 
 // TalosConfigStatus defines the observed state of TalosConfig
