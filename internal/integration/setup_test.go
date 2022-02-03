@@ -198,7 +198,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 	// t.FailNow() should be called in the main goroutine.
 	initErr := make(chan error, 1)
 	go func() {
-		clusterctlClient, err := clusterctlclient.New("../../hack/clusterctl.yaml")
+		clusterctlClient, err := clusterctlclient.New("")
 		if err != nil {
 			initErr <- err
 			return
