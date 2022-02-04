@@ -6,7 +6,7 @@ github_repo = "talos-systems/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(talos-systems/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.5.0"
+previous = "v0.5.1"
 
 pre_release = false
 
@@ -18,12 +18,17 @@ preface = """\
     [notes.capi]
         title = "CAPI v1beta1"
         description = """\
-CABPT now supports CAPI version 1.0.x (v1beta1).
+CABPT supports CAPI version 1.x (v1beta1).
 """
 
-    [notes.talosconfig]
-        title = "`talosconfig` Generation"
+    [notes.hostname]
+        title = "Hostnames in the Talos Machine Configuration"
         description = """\
-CABPT now generates client-side Talos API credentials (`talosconfig`) in the `<cluster>-talosconfig` Secret.
-Generated `talosconfig` will be updated with the endpoints of the control plane `Machine`s.
+Hostname in the generated Talos machine configuration can be set to the corresponding `Machine` name:
+
+```yaml
+spec:
+  hostname:
+    source: MachineName
+```
 """

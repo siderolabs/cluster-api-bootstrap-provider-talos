@@ -1,3 +1,52 @@
+## [CAPI Bootstrap Provider Talos 0.5.2](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.2) (2022-02-04)
+
+Welcome to the v0.5.2 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI v1beta1
+
+CABPT supports CAPI version 1.x (v1beta1).
+
+
+### Hostnames in the Talos Machine Configuration
+
+Hostname in the generated Talos machine configuration can be set to the corresponding `Machine` name:
+
+```yaml
+spec:
+  hostname:
+    source: MachineName
+```
+
+
+### Contributors
+
+* Andrey Smirnov
+* Spencer Smith
+
+### Changes
+<details><summary>5 commits</summary>
+<p>
+
+* [`c3d7579`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/c3d7579bdb2b70c37bbd957bd85dbfa001fa3c9e) chore: disable number of commits check
+* [`911b49e`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/911b49e15cc804738b0f398e2a36cdbd4bbde849) chore: bump CAPI to 1.0.4
+* [`1d758ff`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/1d758ffed8362929788896b1e618be6384bb7384) feat: add readiness/liveness checks
+* [`915a3db`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/915a3dbef738e1ad27aaf695f6d2ca3412399a5f) feat: support setting hostname to the machine name
+* [`fe1806d`](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/commit/fe1806dbc59588c091a5dfb8177a90f0588f48fc) fix: ensure shebang on packet machine configs
+</p>
+</details>
+
+### Dependency Changes
+
+* **sigs.k8s.io/cluster-api**         v1.0.0 -> v1.0.4
+* **sigs.k8s.io/controller-runtime**  v0.10.2 -> v0.10.3
+
+Previous release can be found at [v0.5.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.1)
+
 ## [CAPI Bootstrap Provider Talos 0.5.1](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.1) (2021-12-21)
 
 Welcome to the v0.5.1 release of CAPI Bootstrap Provider Talos!
