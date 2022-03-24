@@ -1,5 +1,5 @@
 domain: cluster.x-k8s.io
-repo: github.com/talos-systems/cluster-api-bootstrap-provider-talos
+repo: github.com/siderolabs/cluster-api-bootstrap-provider-talos
 resources:
 - group: bootstrap
   kind: TalosConfig

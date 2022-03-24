@@ -1,5 +1,5 @@
 REGISTRY ?= ghcr.io
-USERNAME ?= talos-systems
+USERNAME ?= siderolabs
 SHA ?= $(shell git describe --match=none --always --abbrev=8 --dirty)
 TAG ?= $(shell git describe --tag --always --dirty)
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
@@ -9,8 +9,8 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 TEST_RUN ?= ./...
 
-TOOLS ?= ghcr.io/talos-systems/tools:v0.9.0
-PKGS ?= v0.9.0
+TOOLS ?= ghcr.io/siderolabs/tools:v1.0.0
+PKGS ?= v1.0.0
 TALOS_VERSION ?= v0.14.0
 K8S_VERSION ?= 1.23.1
 
@@ -129,7 +129,7 @@ check-dirty: ## Verifies that source tree is not dirty
 	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; exit 1 ; fi
 
 conformance:  ## Performs policy checks against the commit and source code.
-	docker run --rm -it -v $(PWD):/src -w /src ghcr.io/talos-systems/conform:v0.1.0-alpha.23 enforce
+	docker run --rm -it -v $(PWD):/src -w /src ghcr.io/siderolabs/conform:latest enforce
 
 # Make `make test` behave just like `go test` regarding relative paths.
 test:  ## Run tests.
@@ -140,7 +140,7 @@ coverage:  ## Upload coverage data to codecov.io.
 	/usr/local/bin/codecov -f coverage.txt -X fix
 
 talosctl:
-	curl -Lo talosctl https://github.com/talos-systems/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64
+	curl -Lo talosctl https://github.com/siderolabs/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64
 	chmod +x ./talosctl
 
 env-up: talosctl  ## Start development environment.

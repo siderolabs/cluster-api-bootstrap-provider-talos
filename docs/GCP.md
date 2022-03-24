@@ -6,7 +6,7 @@ This guide will detail how to deploy the Talos provider into an existing Kuberne
 
 To import the image, you must download a .tar.gz talos release, add it to Google storage, and import it as an image.
 
-- Download the `gcp.tar.gz` image from our [Github releases](https://github.com/talos-systems/talos/releases).
+- Download the `gcp.tar.gz` image from our [Github releases](https://github.com/siderolabs/talos/releases).
 
 - Follow the [Google instructions](https://cloud.google.com/compute/docs/images/import-existing-image#import_image) on importing an image using cloud storage.
 
