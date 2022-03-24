@@ -7,8 +7,8 @@ ARG PKGS
 
 # Resolve package images using ${PKGS} to be used later in COPY --from=.
 
-FROM ghcr.io/talos-systems/ca-certificates:${PKGS} AS pkg-ca-certificates
-FROM ghcr.io/talos-systems/fhs:${PKGS} AS pkg-fhs
+FROM ghcr.io/siderolabs/ca-certificates:${PKGS} AS pkg-ca-certificates
+FROM ghcr.io/siderolabs/fhs:${PKGS} AS pkg-fhs
 
 # The base target provides the base for running various tasks against the source
 # code
@@ -91,5 +91,5 @@ FROM scratch AS container
 COPY --from=pkg-ca-certificates / /
 COPY --from=pkg-fhs / /
 COPY --from=binary /manager /manager
-LABEL org.opencontainers.image.source https://github.com/talos-systems/cluster-api-bootstrap-provider-talos
+LABEL org.opencontainers.image.source https://github.com/siderolabs/cluster-api-bootstrap-provider-talos
 ENTRYPOINT [ "/manager" ]

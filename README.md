@@ -14,7 +14,7 @@ There are a few corequisites and assumptions that go into using this project:
 
 ## Installing
 
-CABPT provider should be installed alongside with [CACPPT](https://github.com/talos-systems/cluster-api-control-plane-provider-talos) provider.
+CABPT provider should be installed alongside with [CACPPT](https://github.com/siderolabs/cluster-api-control-plane-provider-talos) provider.
 
 ```shell
 clusterctl init --bootstrap talos --control-plane talos --infrastructure <infrastructure provider>
