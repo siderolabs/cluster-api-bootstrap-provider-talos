@@ -412,7 +412,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 		}
 	}
 
-	userConfigStr, err := userConfig.String()
+	userConfigStr, err := userConfig.EncodeString()
 	if err != nil {
 		return retBundle, err
 	}
@@ -532,7 +532,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		data.MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
 	}
 
-	dataOut, err := data.String()
+	dataOut, err := data.EncodeString()
 	if err != nil {
 		return retBundle, err
 	}
