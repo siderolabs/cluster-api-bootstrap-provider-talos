@@ -47,7 +47,7 @@ providers:
 
 This provider's versions are compatible with the following versions of Cluster API:
 
-|                | v1alpha3 (v0.3) | v1alpha4 (v0.4) | v1beta1 (v1.0) |
+|                | v1alpha3 (v0.3) | v1alpha4 (v0.4) | v1beta1 (v1.x) |
 | -------------- | --------------- | --------------- | -------------- |
 | CABPT (v0.3.x) | ✓               |                 |                |
 | CABPT (v0.4.x) |                 | ✓               |                |
@@ -63,11 +63,11 @@ This provider's versions are able to install and manage the following versions o
 
 This provider's versions are compatible with the following versions of Talos:
 
-|                  | v0.11 | v0.12 | v0.13 | v0.14 |
-| ---------------- | ----- | ----- | ----- | ----- |
-| CABPT (v0.3.x)   | ✓     | ✓     | ✓     |       |
-| CABPT (v0.4.x)   | ✓     | ✓     | ✓     | ✓     |
-| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |
+|                  | v0.11 | v0.12 | v0.13 | v0.14 | v1.0  |
+| ---------------- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.3.x)   | ✓     | ✓     | ✓     |       |       |
+| CABPT (v0.4.x)   | ✓     | ✓     | ✓     | ✓     |       |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 CABPT generates machine configuration compatible with Talos version specified in the `talosVersion:` field (see below).
 
@@ -85,7 +85,7 @@ spec:
   controlPlaneConfig:
     controlplane:
       generateType: controlplane
-      talosVersion: v0.14
+      talosVersion: v1.0
   ...
 ```
 
@@ -98,13 +98,13 @@ spec:
   template:
     spec:
       generateType: worker
-      talosVersion: v0.14
+      talosVersion: v1.0
 ```
 
 Fields available in the `TalosConfigTemplate` (and `TalosConfig`) resources:
 
 - `generateType`: Talos machine configuration type to generate (`controlplane`, `init` (deprecated), `worker`) or `none` for user-supplied configuration (see below)
-- `talosVersion`: version of Talos to generate machine configuration for (e.g. `v0.14`, patch version might be omitted).
+- `talosVersion`: version of Talos to generate machine configuration for (e.g. `v1.0`, patch version might be omitted).
    CABPT defaults to the latest supported Talos version, but it can generate configuration compatible with previous versions of Talos.
    It is recommended to always set this field explicitly to avoid issues when CABPT is upgraded to the version which supports new Talos version.
 - `configPatches` (optional): set of machine configuration patches to apply to the generated configuration.
@@ -121,7 +121,7 @@ Machine configuration generated is compatible with the Talos version set in the 
 ```yaml
 spec:
   generateType: controlplane
-  talosVersion: v0.14
+  talosVersion: v1.0
 ```
 
 ### User-supplied Machine Configuration
@@ -151,7 +151,7 @@ The format of these patches is based on [JSON 6902](http://jsonpatch.com/) that 
 ```yaml
 spec:
   generateType: controlplane
-  talosVersion: v0.14
+  talosVersion: v1.0
   configPatches:
     - op: replace
       path: /machine/install
