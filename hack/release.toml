@@ -6,7 +6,7 @@ github_repo = "siderolabs/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.5.1"
+previous = "v0.5.3"
 
 pre_release = false
 
@@ -15,20 +15,9 @@ preface = """\
 
 [notes]
 
-    [notes.capi]
-        title = "CAPI v1beta1"
+    [notes.talos]
+        title = "Talos 1.0"
         description = """\
-CABPT supports CAPI version 1.x (v1beta1).
+CABPT now supports machine configuration generation for Talos 1.0.
 """
 
-    [notes.hostname]
-        title = "Hostnames in the Talos Machine Configuration"
-        description = """\
-Hostname in the generated Talos machine configuration can be set to the corresponding `Machine` name:
-
-```yaml
-spec:
-  hostname:
-    source: MachineName
-```
-"""
