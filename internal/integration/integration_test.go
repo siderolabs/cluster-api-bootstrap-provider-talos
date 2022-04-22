@@ -483,6 +483,50 @@ func TestIntegration(t *testing.T) {
 		err := c.Create(ctx, talosConfig)
 		require.Error(t, err)
 		assert.True(t, apierrors.IsInvalid(err))
+
+		talosConfig.Spec.Hostname.Source = ""
+
+		err = c.Create(ctx, talosConfig)
+		require.NoError(t, err)
+
+		patchHelper, err := patch.NewHelper(talosConfig, c)
+		require.NoError(t, err)
+		talosConfig.Spec.TalosVersion = "v0.7.0"
+
+		err = patchHelper.Patch(ctx, talosConfig)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), "is immutable"))
+	})
+	t.Run("TalosConfigTemplateValidate", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+
+		talosConfigTemplateName := generateName(t, "talosconfigtemplate")
+		talosConfigTemplate := &bootstrapv1alpha3.TalosConfigTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespaceName,
+				Name:      talosConfigTemplateName,
+			},
+			Spec: bootstrapv1alpha3.TalosConfigTemplateSpec{
+				Template: bootstrapv1alpha3.TalosConfigTemplateResource{
+					Spec: bootstrapv1alpha3.TalosConfigSpec{
+						TalosVersion: "v0.1.0",
+					},
+				},
+			},
+		}
+
+		err := c.Create(ctx, talosConfigTemplate)
+		require.NoError(t, err)
+
+		patchHelper, err := patch.NewHelper(talosConfigTemplate, c)
+		require.NoError(t, err)
+		talosConfigTemplate.Spec.Template.Spec.TalosVersion = "v1.0.0"
+
+		err = patchHelper.Patch(ctx, talosConfigTemplate)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), "is immutable"))
 	})
 }
 

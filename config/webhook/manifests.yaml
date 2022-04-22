@@ -22,7 +22,25 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - talosconfigs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfigtemplate
+  failurePolicy: Fail
+  name: vtalosconfigtemplate.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - bootstrap.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha3
+    operations:
+    - UPDATE
+    resources:
+    - talosconfigtemplates
   sideEffects: None

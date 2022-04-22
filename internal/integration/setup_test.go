@@ -95,6 +95,9 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10})
 	require.NoError(t, err)
 
+	err = (&bootstrapv1alpha3.TalosConfigTemplate{}).SetupWebhookWithManager(mgr)
+	require.NoError(t, err)
+
 	err = (&bootstrapv1alpha3.TalosConfig{}).SetupWebhookWithManager(mgr)
 	require.NoError(t, err)
 

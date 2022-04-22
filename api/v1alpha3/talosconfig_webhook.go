@@ -7,6 +7,7 @@ package v1alpha3
 import (
 	"fmt"
 
+	"github.com/google/go-cmp/cmp"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -21,7 +22,7 @@ func (r *TalosConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:verbs=create;update;delete,path=/validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfig,mutating=false,failurePolicy=fail,groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,versions=v1alpha3,name=vtalosconfig.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1
+//+kubebuilder:webhook:verbs=create;update,path=/validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfig,mutating=false,failurePolicy=fail,groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,versions=v1alpha3,name=vtalosconfig.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1
 
 var _ webhook.Validator = &TalosConfig{}
 
@@ -31,7 +32,13 @@ func (r *TalosConfig) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateUpdate(old runtime.Object) error {
+func (r *TalosConfig) ValidateUpdate(oldRaw runtime.Object) error {
+	old := oldRaw.(*TalosConfig)
+
+	if !cmp.Equal(r.Spec, old.Spec) {
+		return apierrors.NewBadRequest("TalosConfig.Spec is immutable")
+	}
+
 	return r.validate()
 }
 
