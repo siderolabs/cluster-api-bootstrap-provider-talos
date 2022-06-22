@@ -55,19 +55,19 @@ This provider's versions are compatible with the following versions of Cluster A
 
 This provider's versions are able to install and manage the following versions of Kubernetes:
 
-|                | v1.16 | v 1.17 | v1.18 | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 |
-| -------------- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.3.x) | ✓     | ✓      | ✓     | ✓     | ✓     | ✓     |       |       |
-| CABPT (v0.4.x) |       |        |       | ✓     | ✓     | ✓     | ✓     | ✓     |
-| CABPT (v0.5.x) |       |        |       | ✓     | ✓     | ✓     | ✓     | ✓     |
+|                | v1.16 | v 1.17 | v1.18 | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 | v1.24 |
+| -------------- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.3.x) | ✓     | ✓      | ✓     | ✓     | ✓     | ✓     |       |       |       |
+| CABPT (v0.4.x) |       |        |       | ✓     | ✓     | ✓     | ✓     | ✓     |       |
+| CABPT (v0.5.x) |       |        |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 This provider's versions are compatible with the following versions of Talos:
 
-|                  | v0.11 | v0.12 | v0.13 | v0.14 |
-| ---------------- | ----- | ----- | ----- | ----- |
-| CABPT (v0.3.x)   | ✓     | ✓     | ✓     |       |
-| CABPT (v0.4.x)   | ✓     | ✓     | ✓     | ✓     |
-| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |
+|                  | v0.11 | v0.12 | v0.13 | v0.14 | v1.0  | v1.1  |
+| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.3.x)   | ✓     | ✓     | ✓     |       |       |       |
+| CABPT (v0.4.x)   | ✓     | ✓     | ✓     | ✓     |       |       |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 CABPT generates machine configuration compatible with Talos version specified in the `talosVersion:` field (see below).
 
@@ -85,7 +85,7 @@ spec:
   controlPlaneConfig:
     controlplane:
       generateType: controlplane
-      talosVersion: v0.14
+      talosVersion: v1.1
   ...
 ```
 
@@ -98,7 +98,7 @@ spec:
   template:
     spec:
       generateType: worker
-      talosVersion: v0.14
+      talosVersion: v1.1
 ```
 
 Fields available in the `TalosConfigTemplate` (and `TalosConfig`) resources:
@@ -121,7 +121,7 @@ Machine configuration generated is compatible with the Talos version set in the 
 ```yaml
 spec:
   generateType: controlplane
-  talosVersion: v0.14
+  talosVersion: v1.1
 ```
 
 ### User-supplied Machine Configuration
