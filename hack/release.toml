@@ -6,7 +6,7 @@ github_repo = "siderolabs/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.5.2"
+previous = "v0.5.3"
 
 pre_release = false
 
@@ -16,8 +16,8 @@ preface = """\
 [notes]
 
     [notes.talos]
-        title = "Talos 1.0"
+        title = "Talos 1.1"
         description = """\
-CABPT now supports machine configuration generation for Talos 1.0.
+CABPT now supports machine configuration generation for Talos 1.1.
 """
 
