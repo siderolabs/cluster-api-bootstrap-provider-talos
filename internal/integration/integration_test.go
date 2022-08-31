@@ -6,6 +6,7 @@ package integration
 
 import (
 	"encoding/json"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,6 @@ import (
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
 	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
-	"inet.af/netaddr"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -120,7 +120,7 @@ func TestIntegration(t *testing.T) {
 		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
 
 		// attach addresses to machines
-		ip := netaddr.MustParseIP("10.5.0.2")
+		ip := netip.MustParseAddr("10.5.0.2")
 		expectedEndpoints := []string{}
 
 		for _, cpMachine := range controlplaneMachines {

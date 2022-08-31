@@ -16,7 +16,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	talosclient "github.com/talos-systems/talos/pkg/machinery/client"
 	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
 	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
 	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
@@ -252,7 +251,7 @@ func waitForEndpointsClusterClientConfig(ctx context.Context, t *testing.T, c cl
 }
 
 // validateClientConfig validates talosctl configuration.
-func validateClientConfig(t *testing.T, config *talosclientconfig.Config, endpoints ...string) *talosclient.Credentials {
+func validateClientConfig(t *testing.T, config *talosclientconfig.Config, endpoints ...string) {
 	t.Helper()
 
 	assert.Len(t, config.Contexts, 1)
@@ -266,11 +265,10 @@ func validateClientConfig(t *testing.T, config *talosclientconfig.Config, endpoi
 
 	assert.Equal(t, endpoints, context.Endpoints)
 	assert.Empty(t, context.Nodes)
-	creds, err := talosclient.CredentialsFromConfigContext(context)
-	require.NoError(t, err)
-	assert.NotEmpty(t, creds.CA)
 
-	return creds
+	assert.NotEmpty(t, context.CA)
+	assert.NotEmpty(t, context.Crt)
+	assert.NotEmpty(t, context.Key)
 }
 
 type runtimeMode struct {

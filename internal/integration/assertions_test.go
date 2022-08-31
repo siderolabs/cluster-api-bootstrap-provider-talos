@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AlekSi/pointer"
+	"github.com/siderolabs/go-pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
@@ -51,7 +51,7 @@ func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Clie
 
 	key := types.NamespacedName{
 		Namespace: talosConfig.Namespace,
-		Name:      pointer.GetString(talosConfig.Status.DataSecretName),
+		Name:      pointer.SafeDeref(talosConfig.Status.DataSecretName),
 	}
 	require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret))
 

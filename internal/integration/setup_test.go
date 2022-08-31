@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlekSi/pointer"
+	"github.com/siderolabs/go-pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
@@ -131,7 +131,7 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 	if !skipCleanup {
 		t.Cleanup(func() {
 			opts := &client.DeleteOptions{
-				GracePeriodSeconds: pointer.ToInt64(0),
+				GracePeriodSeconds: pointer.To(int64(0)),
 			}
 
 			t.Logf("Deleting namespace %q ...", namespace)
@@ -214,13 +214,17 @@ func installCAPI(ctx context.Context, t *testing.T) {
 			InfrastructureProviders: []string{clusterctlclient.NoopProvider},
 			ControlPlaneProviders:   []string{clusterctlclient.NoopProvider},
 		}
-		images, err := clusterctlClient.InitImages(initOpts)
-		if err != nil {
-			initErr <- err
-			return
-		}
 
-		t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
+		if false {
+			// TODO: InitImages is broken in upstream, see https://github.com/kubernetes-sigs/cluster-api/issues/6986
+			images, err := clusterctlClient.InitImages(initOpts)
+			if err != nil {
+				initErr <- err
+				return
+			}
+
+			t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
+		}
 
 		_, err = clusterctlClient.Init(initOpts)
 		initErr <- err
@@ -273,7 +277,7 @@ func startTestEnv(ctx context.Context, t *testing.T) (*rest.Config, *envtest.Env
 			PollInterval:     time.Second,
 		},
 		ErrorIfCRDPathMissing: true,
-		UseExistingCluster:    pointer.ToBool(true),
+		UseExistingCluster:    pointer.To(true),
 	}
 
 	// Run Start in the goroutine to handle context cancelation.
