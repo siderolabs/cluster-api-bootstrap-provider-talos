@@ -1,3 +1,56 @@
+## [CAPI Bootstrap Provider Talos 0.5.5](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.5) (2022-09-01)
+
+Welcome to the v0.5.5 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos 1.2
+
+CABPT now supports machine configuration generation for Talos 1.2.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Dmitriy Matrenichev
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`af2d2fa`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/af2d2fa724690ad0c697f80025dde55b0fb5d328) feat: update to Talos 1.2.0
+* [`e79b3c0`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e79b3c037c5f2c867bab71c990ba2b28dbb26138) feat: update Talos to 1.2.0-beta.2
+</p>
+</details>
+
+### Changes from siderolabs/go-pointer
+<details><summary>2 commits</summary>
+<p>
+
+* [`71ccdf0`](https://github.com/siderolabs/go-pointer/commit/71ccdf0d65330596f4def36da37625e4f362f2a9) chore: implement main functionality
+* [`c1c3b23`](https://github.com/siderolabs/go-pointer/commit/c1c3b235d30cb0de97ed0645809f2b21af3b021e) Initial commit
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/google/go-cmp**          v0.5.7 -> v0.5.8
+* **github.com/siderolabs/go-pointer**  v1.0.0 **_new_**
+* **github.com/stretchr/testify**       v1.7.1 -> v1.8.0
+* **github.com/talos-systems/crypto**   v0.3.5 -> v0.3.6
+* **golang.org/x/sys**                  a24fb2fb8a0f -> d48e67d00261
+* **k8s.io/api**                        v0.23.5 -> v0.24.2
+* **k8s.io/apiextensions-apiserver**    v0.23.5 -> v0.24.2
+* **k8s.io/apimachinery**               v0.23.5 -> v0.24.2
+* **k8s.io/client-go**                  v0.23.5 -> v0.24.2
+* **sigs.k8s.io/cluster-api**           v1.1.4 -> v1.2.1
+* **sigs.k8s.io/controller-runtime**    v0.11.2 -> v0.12.3
+
+Previous release can be found at [v0.5.4](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.4)
+
 ## [CAPI Bootstrap Provider Talos 0.5.4](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.4) (2022-06-22)
 
 Welcome to the v0.5.4 release of CAPI Bootstrap Provider Talos!
