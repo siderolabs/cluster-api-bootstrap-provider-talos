@@ -10,9 +10,9 @@ import (
 	"sort"
 
 	"github.com/go-logr/logr"
-	"github.com/talos-systems/crypto/x509"
-	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
-	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/siderolabs/crypto/x509"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
+	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/collections"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 )
 
 func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstrapv1alpha3.TalosConfig, secretName string) (*corev1.Secret, error) {

@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/controllers"
+	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/controllers"
 	// +kubebuilder:scaffold:imports
 )
 

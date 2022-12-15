@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
+	talosclientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
+	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
+	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	talosclientconfig "github.com/talos-systems/talos/pkg/machinery/client/config"
-	machineconfig "github.com/talos-systems/talos/pkg/machinery/config"
-	talosmachine "github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	// +kubebuilder:scaffold:imports
 )
 

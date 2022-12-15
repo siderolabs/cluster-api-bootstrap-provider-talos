@@ -56,7 +56,7 @@ ENV CGO_ENABLED 1
 ARG TALOS_VERSION
 ARG TAG
 ARG ARTIFACTS
-ARG PKG=github.com/talos-systems/cluster-api-bootstrap-provider-talos/internal/integration
+ARG PKG=github.com/siderolabs/cluster-api-bootstrap-provider-talos/internal/integration
 ARG GO_LDFLAGS="-linkmode=external -extldflags '-static' -X ${PKG}.TalosVersion=${TALOS_VERSION} -X ${PKG}.Artifacts=${ARTIFACTS} -X ${PKG}.Tag=${TAG}"
 RUN --mount=type=cache,target=/.cache go test -race -ldflags "${GO_LDFLAGS}" -coverpkg=./... -v -c ./internal/integration
 
