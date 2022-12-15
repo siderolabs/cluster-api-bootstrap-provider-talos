@@ -1,3 +1,86 @@
+## [CAPI Bootstrap Provider Talos 0.5.6](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.6) (2022-12-15)
+
+Welcome to the v0.5.6 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos 1.3
+
+CABPT now supports machine configuration generation for Talos 1.3.x.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Andrey Smirnov
+* Alexey Palazhchenko
+* Andrew Rynhard
+* Artem Chernyshev
+* Noel Georgi
+* Serge Logvinov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`b270d15`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/b270d152a6596ca2f1b29ad868a3aeee9e41a5e3) feat: update CABPT to Talos 1.3.0
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>27 commits</summary>
+<p>
+
+* [`c3225ee`](https://github.com/siderolabs/crypto/commit/c3225eee603a8d1218c67e1bfe33ddde7953ed74) feat: allow CSR template subject field to be overridden
+* [`8570669`](https://github.com/siderolabs/crypto/commit/85706698dac8cddd0e9f41006bed059347d2ea26) chore: rename to siderolabs/crypto
+* [`e9df1b8`](https://github.com/siderolabs/crypto/commit/e9df1b8ca74c6efdc7f72191e5d2613830162fd5) feat: add support for generating keys from RSA-SHA256 CAs
+* [`510b0d2`](https://github.com/siderolabs/crypto/commit/510b0d2753a89170d0c0f60e052a66484997a5b2) chore: add json tags
+* [`6fa2d93`](https://github.com/siderolabs/crypto/commit/6fa2d93d0382299d5471e0de8e831c923398aaa8) fix: deepcopy nil fields as `nil`
+* [`9a63cba`](https://github.com/siderolabs/crypto/commit/9a63cba8dabd278f3080fa8c160613efc48c43f8) fix: add back support for generating ECDSA keys with P-256 and SHA512
+* [`893bc66`](https://github.com/siderolabs/crypto/commit/893bc66e4716a4cb7d1d5e66b5660ffc01f22823) fix: use SHA256 for ECDSA-P256
+* [`deec8d4`](https://github.com/siderolabs/crypto/commit/deec8d47700e10e3ea813bdce01377bd93c83367) chore: implement DeepCopy methods for PEMEncoded* types
+* [`d3cb772`](https://github.com/siderolabs/crypto/commit/d3cb77220384b3a3119a6f3ddb1340bbc811f1d1) feat: make possible to change KeyUsage
+* [`6bc5bb5`](https://github.com/siderolabs/crypto/commit/6bc5bb50c52767296a1b1cab6580e3fcf1358f34) chore: remove unused argument
+* [`cd18ef6`](https://github.com/siderolabs/crypto/commit/cd18ef62eb9f65d8b6730a2eb73e47e629949e1b) feat: add support for several organizations
+* [`97c888b`](https://github.com/siderolabs/crypto/commit/97c888b3924dd5ac70b8d30dd66b4370b5ab1edc) chore: add options to CSR
+* [`7776057`](https://github.com/siderolabs/crypto/commit/7776057f5086157873f62f6a21ec23fa9fd86e05) chore: fix typos
+* [`80df078`](https://github.com/siderolabs/crypto/commit/80df078327030af7e822668405bb4853c512bd7c) chore: remove named result parameters
+* [`15bdd28`](https://github.com/siderolabs/crypto/commit/15bdd282b74ac406ab243853c1b50338a1bc29d0) chore: minor updates
+* [`4f80b97`](https://github.com/siderolabs/crypto/commit/4f80b976b640d773fb025d981bf85bcc8190815b) fix: verify CSR signature before issuing a certificate
+* [`39584f1`](https://github.com/siderolabs/crypto/commit/39584f1b6e54e9966db1f16369092b2215707134) feat: support for key/certificate types RSA, Ed25519, ECDSA
+* [`cf75519`](https://github.com/siderolabs/crypto/commit/cf75519cab82bd1b128ae9b45107c6bb422bd96a) fix: function NewKeyPair should create certificate with proper subject
+* [`751c95a`](https://github.com/siderolabs/crypto/commit/751c95aa9434832a74deb6884cff7c5fd785db0b) feat: add 'PEMEncodedKey' which allows to transport keys in YAML
+* [`562c3b6`](https://github.com/siderolabs/crypto/commit/562c3b66f89866746c0ba47927c55f41afed0f7f) feat: add support for public RSA key in RSAKey
+* [`bda0e9c`](https://github.com/siderolabs/crypto/commit/bda0e9c24e80c658333822e2002e0bc671ac53a3) feat: enable more conversions between encoded and raw versions
+* [`e0dd56a`](https://github.com/siderolabs/crypto/commit/e0dd56ac47456f85c0b247999afa93fb87ebc78b) feat: add NotBefore option for x509 cert creation
+* [`12a4897`](https://github.com/siderolabs/crypto/commit/12a489768a6bb2c13e16e54617139c980f99a658) feat: add support for SPKI fingerprint generation and matching
+* [`d0c3eef`](https://github.com/siderolabs/crypto/commit/d0c3eef149ec9b713e7eca8c35a6214bd0a64bc4) fix: implement NewKeyPair
+* [`196679e`](https://github.com/siderolabs/crypto/commit/196679e9ec77cb709db54879ddeddd4eaafaea01) feat: move `pkg/grpc/tls` from `github.com/talos-systems/talos` as `./tls`
+* [`1ff6242`](https://github.com/siderolabs/crypto/commit/1ff6242c91bb298ceeb4acd65685cba952fe4178) chore: initial version as imported from talos-systems/talos
+* [`835063e`](https://github.com/siderolabs/crypto/commit/835063e055b28a525038b826a6d80cbe76402414) chore: initial commit
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/go-logr/logr**                    v1.2.0 -> v1.2.3
+* **github.com/google/go-cmp**                   v0.5.8 -> v0.5.9
+* **github.com/siderolabs/crypto**               v0.4.0 **_new_**
+* **github.com/siderolabs/talos/pkg/machinery**  v1.3.0 **_new_**
+* **github.com/stretchr/testify**                v1.8.0 -> v1.8.1
+* **golang.org/x/sys**                           d48e67d00261 -> v0.3.0
+* **k8s.io/api**                                 v0.24.2 -> v0.25.0
+* **k8s.io/apiextensions-apiserver**             v0.24.2 -> v0.25.0
+* **k8s.io/apimachinery**                        v0.24.2 -> v0.25.0
+* **k8s.io/client-go**                           v0.24.2 -> v0.25.0
+* **sigs.k8s.io/cluster-api**                    v1.2.1 -> v1.3.1
+* **sigs.k8s.io/controller-runtime**             v0.12.3 -> v0.13.1
+
+Previous release can be found at [v0.5.5](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.5)
+
 ## [CAPI Bootstrap Provider Talos 0.5.5](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.5) (2022-09-01)
 
 Welcome to the v0.5.5 release of CAPI Bootstrap Provider Talos!
