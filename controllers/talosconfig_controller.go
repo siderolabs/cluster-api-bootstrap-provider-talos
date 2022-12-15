@@ -15,13 +15,13 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
-	"github.com/talos-systems/talos/pkg/machinery/config"
-	"github.com/talos-systems/talos/pkg/machinery/config/configpatcher"
-	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1"
-	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/generate"
-	"github.com/talos-systems/talos/pkg/machinery/config/types/v1alpha1/machine"
-	"github.com/talos-systems/talos/pkg/machinery/constants"
-	"github.com/talos-systems/talos/pkg/machinery/role"
+	"github.com/siderolabs/talos/pkg/machinery/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/role"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,8 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	// +kubebuilder:scaffold:imports
 )
 

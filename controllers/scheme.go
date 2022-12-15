@@ -10,8 +10,8 @@ import (
 	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 
-	bootstrapv1alpha2 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha2"
-	bootstrapv1alpha3 "github.com/talos-systems/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1alpha2 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha2"
+	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	// +kubebuilder:scaffold:imports
 )
 
