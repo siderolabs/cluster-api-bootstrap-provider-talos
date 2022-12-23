@@ -1,2 +1,5 @@
 resources:
 - manager.yaml
+images:
+- name: controller
+  newName: ghcr.io/siderolabs/cluster-api-talos-controller
