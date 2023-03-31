@@ -8,7 +8,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/controllers"
 	"os"
+	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"strconv"
 	"strings"
 	"testing"
@@ -203,6 +206,11 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 	}
 
 	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+
+	machine, err := bsutil.GetConfigOwner(ctx, c, talosConfig)
+	require.NoError(t, err)
+
+	assert.True(t, annotations.HasWithPrefix(controllers.MachineHookAnnotationTalosReset, machine.GetAnnotations()))
 
 	if talosConfig.Spec.GenerateType == talosmachine.TypeInit.String() || talosConfig.Spec.GenerateType == talosmachine.TypeControlPlane.String() {
 		// wait for additional condition

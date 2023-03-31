@@ -110,6 +110,15 @@ func setupReconcilers(ctx context.Context, mgr manager.Manager) {
 		setupLog.Error(err, "unable to create controller", "controller", "TalosConfig")
 		os.Exit(1)
 	}
+	if err := (&controllers.MachineReconciler{
+		Client:           mgr.GetClient(),
+		Log:              ctrl.Log.WithName("controllers").WithName("Machine"),
+		Scheme:           mgr.GetScheme(),
+		WatchFilterValue: watchFilterValue,
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 10}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Machine")
+		os.Exit(1)
+	}
 }
 
 func setupWebhooks(mgr manager.Manager) {

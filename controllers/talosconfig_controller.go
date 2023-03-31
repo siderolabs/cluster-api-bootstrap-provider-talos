@@ -115,7 +115,8 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;machines;machines/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;patch
 // +kubebuilder:rbac:groups=exp.cluster.x-k8s.io,resources=machinepools;machinepools/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
@@ -137,6 +138,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Initialize the patch helper
 	patchHelper, err := patch.NewHelper(config, r.Client)
 	if err != nil {
+		log.Error(err, "could not create a patchHelper for config")
 		return ctrl.Result{}, err
 	}
 
@@ -189,6 +191,24 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	log = log.WithName(fmt.Sprintf("owner-name=%s", owner.GetName()))
+
+	// Initialize owner patch helper
+	ownerPatchHelper, err := patch.NewHelper(owner, r.Client)
+	if err != nil {
+		log.Error(err, "could not create a patchHelper for owner")
+		return ctrl.Result{}, err
+	}
+
+	// Patch owner after each reconciliation
+	defer func() {
+		if err := ownerPatchHelper.Patch(ctx, owner); err != nil {
+			log.Error(err, "failed to patch config owner")
+
+			if rerr == nil {
+				rerr = err
+			}
+		}
+	}()
 
 	// Lookup the cluster the machine is associated with
 	cluster, err := util.GetClusterByName(ctx, r.Client, owner.GetNamespace(), owner.ClusterName())
@@ -259,6 +279,10 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		return ctrl.Result{}, err
 	}
+
+	// Use pre-terminate capi hook to do a Talos specific reset on the node
+	// when it is being deleted.
+	owner.Unstructured.SetAnnotations(map[string]string{MachineHookAnnotationTalosReset: controllerName})
 
 	config.Status.Ready = true
 	conditions.MarkTrue(config, bootstrapv1alpha3.DataSecretAvailableCondition)
