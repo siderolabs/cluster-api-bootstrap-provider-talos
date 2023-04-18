@@ -113,7 +113,7 @@ func (r *TalosConfigReconciler) writeSecretsBundleSecret(ctx context.Context, sc
 			Namespace: scope.Config.Namespace,
 			Name:      secretName,
 			Labels: map[string]string{
-				capiv1.ClusterLabelName: scope.Cluster.Name,
+				capiv1.ClusterNameLabel: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
@@ -143,7 +143,7 @@ func (r *TalosConfigReconciler) writeK8sCASecret(ctx context.Context, scope *Tal
 			Namespace: scope.Config.Namespace,
 			Name:      scope.Cluster.Name + "-ca",
 			Labels: map[string]string{
-				capiv1.ClusterLabelName: scope.Cluster.Name,
+				capiv1.ClusterNameLabel: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),
@@ -185,7 +185,7 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 			Namespace: scope.Config.Namespace,
 			Name:      dataSecretName,
 			Labels: map[string]string{
-				capiv1.ClusterLabelName: scope.Cluster.Name,
+				capiv1.ClusterNameLabel: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(scope.Config, bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig")),
@@ -253,7 +253,7 @@ func (r *TalosConfigReconciler) reconcileClientConfig(ctx context.Context, log l
 				Namespace: scope.Cluster.Namespace,
 				Name:      dataSecretName,
 				Labels: map[string]string{
-					capiv1.ClusterLabelName: scope.Cluster.Name,
+					capiv1.ClusterNameLabel: scope.Cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(scope.Cluster, capiv1.GroupVersion.WithKind("Cluster")),

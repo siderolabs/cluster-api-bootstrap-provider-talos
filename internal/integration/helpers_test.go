@@ -101,11 +101,11 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 	t.Helper()
 
 	labels := map[string]string{
-		capiv1.ClusterLabelName: cluster.Name,
+		capiv1.ClusterNameLabel: cluster.Name,
 	}
 
 	if controlplane {
-		labels[capiv1.MachineControlPlaneLabelName] = ""
+		labels[capiv1.MachineControlPlaneLabel] = ""
 	}
 
 	machineName := generateName(t, "machine")

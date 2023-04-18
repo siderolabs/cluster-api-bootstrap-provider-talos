@@ -227,7 +227,7 @@ func TestIntegration(t *testing.T) {
 				Namespace: namespaceName,
 				Name:      cluster.Name + "-talos",
 				Labels: map[string]string{
-					capiv1.ClusterLabelName: cluster.Name,
+					capiv1.ClusterNameLabel: cluster.Name,
 				},
 			},
 		}

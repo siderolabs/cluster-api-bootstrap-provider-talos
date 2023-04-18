@@ -588,7 +588,7 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(o client.Object) []ctrl.Re
 	selectors := []client.ListOption{
 		client.InNamespace(c.Namespace),
 		client.MatchingLabels{
-			capiv1.ClusterLabelName: c.Name,
+			capiv1.ClusterNameLabel: c.Name,
 		},
 	}
 
