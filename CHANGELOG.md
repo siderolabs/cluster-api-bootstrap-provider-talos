@@ -1,3 +1,121 @@
+## [CAPI Bootstrap Provider Talos 0.6.0-alpha.0](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.0-alpha.0) (2023-04-19)
+
+Welcome to the v0.6.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
+*This is a pre-release of CAPI Bootstrap Provider Talos*
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos 1.4
+
+CABPT now supports machine configuration generation for Talos 1.4.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Andrey Smirnov
+* Alexey Palazhchenko
+* Spencer Smith
+* Noel Georgi
+* Andrew Rynhard
+* Artem Chernyshev
+* Artem Chernyshev
+* Benjamin Gentil
+* Dmitriy Matrenichev
+* Serge Logvinov
+
+### Changes
+<details><summary>19 commits</summary>
+<p>
+
+* [`d25c6a4`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/d25c6a46bf946ac0b7bb1365ecdb593031cec789) feat: update Talos to 1.4.0
+* [`d3adcdb`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/d3adcdba9356331c5243e8dcbd3e9afdf6ba08ac) chore: bump dependencies
+* [`6c9d018`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/6c9d018f1a1c908c9cd514f717aadcd62a829c4f) feat: add Tilt support
+* [`376eb01`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/376eb01b82ff65f26fae1ef8df7d2301ea900585) feat: update CABPT to Talos 1.3.0
+* [`4f2f856`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/4f2f85639f84521b99e830bc60dffc3ba574343d) feat: update to Talos 1.2.0
+* [`a7fef2c`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/a7fef2c021a48c4436508d7ff1b7dce27e61be39) feat: update Talos to 1.2.0-beta.2
+* [`2f3b21f`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/2f3b21f0926f08f4e480dac26e4db97699ee005b) feat: bump Talos to 1.1.0
+* [`8b180df`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/8b180dfd87358f9d4d41f277aad4d592a7a8a1a5) feat: make `talosconfig` and `talosconfigtemplate` immutable
+* [`e66b203`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e66b2037f81ef5a07540929184c305fcaf7c2bab) docs: update README for Talos 1.0
+* [`ff9d1e8`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/ff9d1e86ee0731cfb3fea2f994a89b4633923d78) feat: update to Talos 1.0
+* [`4eb3093`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/4eb30934d3e1cd29fd79d768f8c0ec3ae5151f33) chore: update after org rename
+* [`e3a1f5a`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e3a1f5afc8d8af3deeb483c9f2b64e9a60c31a87) docs: add note for clusterctl rename bug
+* [`7a4bc89`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/7a4bc890a8d0ea68c4a08451e3e767157d6e008f) chore: update GPG org
+* [`3bc5406`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/3bc5406fcbbfac8024771b7e7b11228dd798fed1) chore: bump cert-manager to v1
+* [`f2b1060`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/f2b1060ce79dfc7b271b353053911efbb8b0356c) chore: bump CAPI to 1.0.4
+* [`b27f976`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/b27f9765e87e9c3aa6730286579a4ca4ba05d384) feat: add readiness/liveness checks
+* [`c7a7265`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/c7a7265d3b86c69fc8d35bf39a62c4ea719c9a25) feat: support setting hostname to the machine name
+* [`36fb7cc`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/36fb7cc14e4523e50a32d4e1a0a22d8085f361f9) fix: ensure shebang on packet machine configs
+* [`8e39bd7`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/8e39bd731f06f14e642d7ffad202aec44948a492) feat: update Talos to 0.14.0
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>27 commits</summary>
+<p>
+
+* [`c3225ee`](https://github.com/siderolabs/crypto/commit/c3225eee603a8d1218c67e1bfe33ddde7953ed74) feat: allow CSR template subject field to be overridden
+* [`8570669`](https://github.com/siderolabs/crypto/commit/85706698dac8cddd0e9f41006bed059347d2ea26) chore: rename to siderolabs/crypto
+* [`e9df1b8`](https://github.com/siderolabs/crypto/commit/e9df1b8ca74c6efdc7f72191e5d2613830162fd5) feat: add support for generating keys from RSA-SHA256 CAs
+* [`510b0d2`](https://github.com/siderolabs/crypto/commit/510b0d2753a89170d0c0f60e052a66484997a5b2) chore: add json tags
+* [`6fa2d93`](https://github.com/siderolabs/crypto/commit/6fa2d93d0382299d5471e0de8e831c923398aaa8) fix: deepcopy nil fields as `nil`
+* [`9a63cba`](https://github.com/siderolabs/crypto/commit/9a63cba8dabd278f3080fa8c160613efc48c43f8) fix: add back support for generating ECDSA keys with P-256 and SHA512
+* [`893bc66`](https://github.com/siderolabs/crypto/commit/893bc66e4716a4cb7d1d5e66b5660ffc01f22823) fix: use SHA256 for ECDSA-P256
+* [`deec8d4`](https://github.com/siderolabs/crypto/commit/deec8d47700e10e3ea813bdce01377bd93c83367) chore: implement DeepCopy methods for PEMEncoded* types
+* [`d3cb772`](https://github.com/siderolabs/crypto/commit/d3cb77220384b3a3119a6f3ddb1340bbc811f1d1) feat: make possible to change KeyUsage
+* [`6bc5bb5`](https://github.com/siderolabs/crypto/commit/6bc5bb50c52767296a1b1cab6580e3fcf1358f34) chore: remove unused argument
+* [`cd18ef6`](https://github.com/siderolabs/crypto/commit/cd18ef62eb9f65d8b6730a2eb73e47e629949e1b) feat: add support for several organizations
+* [`97c888b`](https://github.com/siderolabs/crypto/commit/97c888b3924dd5ac70b8d30dd66b4370b5ab1edc) chore: add options to CSR
+* [`7776057`](https://github.com/siderolabs/crypto/commit/7776057f5086157873f62f6a21ec23fa9fd86e05) chore: fix typos
+* [`80df078`](https://github.com/siderolabs/crypto/commit/80df078327030af7e822668405bb4853c512bd7c) chore: remove named result parameters
+* [`15bdd28`](https://github.com/siderolabs/crypto/commit/15bdd282b74ac406ab243853c1b50338a1bc29d0) chore: minor updates
+* [`4f80b97`](https://github.com/siderolabs/crypto/commit/4f80b976b640d773fb025d981bf85bcc8190815b) fix: verify CSR signature before issuing a certificate
+* [`39584f1`](https://github.com/siderolabs/crypto/commit/39584f1b6e54e9966db1f16369092b2215707134) feat: support for key/certificate types RSA, Ed25519, ECDSA
+* [`cf75519`](https://github.com/siderolabs/crypto/commit/cf75519cab82bd1b128ae9b45107c6bb422bd96a) fix: function NewKeyPair should create certificate with proper subject
+* [`751c95a`](https://github.com/siderolabs/crypto/commit/751c95aa9434832a74deb6884cff7c5fd785db0b) feat: add 'PEMEncodedKey' which allows to transport keys in YAML
+* [`562c3b6`](https://github.com/siderolabs/crypto/commit/562c3b66f89866746c0ba47927c55f41afed0f7f) feat: add support for public RSA key in RSAKey
+* [`bda0e9c`](https://github.com/siderolabs/crypto/commit/bda0e9c24e80c658333822e2002e0bc671ac53a3) feat: enable more conversions between encoded and raw versions
+* [`e0dd56a`](https://github.com/siderolabs/crypto/commit/e0dd56ac47456f85c0b247999afa93fb87ebc78b) feat: add NotBefore option for x509 cert creation
+* [`12a4897`](https://github.com/siderolabs/crypto/commit/12a489768a6bb2c13e16e54617139c980f99a658) feat: add support for SPKI fingerprint generation and matching
+* [`d0c3eef`](https://github.com/siderolabs/crypto/commit/d0c3eef149ec9b713e7eca8c35a6214bd0a64bc4) fix: implement NewKeyPair
+* [`196679e`](https://github.com/siderolabs/crypto/commit/196679e9ec77cb709db54879ddeddd4eaafaea01) feat: move `pkg/grpc/tls` from `github.com/talos-systems/talos` as `./tls`
+* [`1ff6242`](https://github.com/siderolabs/crypto/commit/1ff6242c91bb298ceeb4acd65685cba952fe4178) chore: initial version as imported from talos-systems/talos
+* [`835063e`](https://github.com/siderolabs/crypto/commit/835063e055b28a525038b826a6d80cbe76402414) chore: initial commit
+</p>
+</details>
+
+### Changes from siderolabs/go-pointer
+<details><summary>2 commits</summary>
+<p>
+
+* [`71ccdf0`](https://github.com/siderolabs/go-pointer/commit/71ccdf0d65330596f4def36da37625e4f362f2a9) chore: implement main functionality
+* [`c1c3b23`](https://github.com/siderolabs/go-pointer/commit/c1c3b235d30cb0de97ed0645809f2b21af3b021e) Initial commit
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/evanphx/json-patch**              v4.11.0 -> v5.6.0
+* **github.com/go-logr/logr**                    v0.4.0 -> v1.2.3
+* **github.com/google/go-cmp**                   v0.5.9 **_new_**
+* **github.com/siderolabs/crypto**               v0.4.0 **_new_**
+* **github.com/siderolabs/go-pointer**           v1.0.0 **_new_**
+* **github.com/siderolabs/talos/pkg/machinery**  v1.4.0 **_new_**
+* **github.com/stretchr/testify**                v1.7.0 -> v1.8.2
+* **golang.org/x/sys**                           39ccf1dd6fa6 -> v0.7.0
+* **k8s.io/api**                                 v0.22.2 -> v0.26.1
+* **k8s.io/apiextensions-apiserver**             v0.22.2 -> v0.26.1
+* **k8s.io/apimachinery**                        v0.22.2 -> v0.26.1
+* **k8s.io/client-go**                           v0.22.2 -> v0.26.1
+* **sigs.k8s.io/cluster-api**                    v1.0.0 -> v1.4.1
+* **sigs.k8s.io/controller-runtime**             v0.10.2 -> v0.14.5
+
+Previous release can be found at [v0.5.0](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.0)
+
+
 ## [CAPI Bootstrap Provider Talos 0.5.0-alpha.0](https://github.com/talos-systems/cluster-api-bootstrap-provider-talos/releases/tag/v0.5.0-alpha.0) (2021-10-27)
 
 Welcome to the v0.5.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
