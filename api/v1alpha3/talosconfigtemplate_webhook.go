@@ -10,6 +10,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *TalosConfigTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -23,22 +24,22 @@ func (r *TalosConfigTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &TalosConfigTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateCreate() error {
-	return nil
+func (r *TalosConfigTemplate) ValidateCreate() (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateUpdate(oldRaw runtime.Object) error {
+func (r *TalosConfigTemplate) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
 	old := oldRaw.(*TalosConfigTemplate)
 
 	if !cmp.Equal(r.Spec, old.Spec) {
-		return apierrors.NewBadRequest("TalosConfigTemplate.Spec is immutable")
+		return nil, apierrors.NewBadRequest("TalosConfigTemplate.Spec is immutable")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateDelete() error {
-	return nil
+func (r *TalosConfigTemplate) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }

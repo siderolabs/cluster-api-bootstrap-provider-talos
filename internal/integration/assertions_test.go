@@ -14,6 +14,7 @@ import (
 	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
+	"github.com/siderolabs/talos/pkg/machinery/config/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -60,7 +61,7 @@ func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Clie
 	provider, err := configloader.NewFromBytes(bootstrapDataSecret.Data["value"])
 	require.NoError(t, err)
 
-	_, err = provider.Validate(runtimeMode{false}, machineconfig.WithStrict())
+	_, err = provider.Validate(runtimeMode{false}, validation.WithStrict())
 	assert.NoError(t, err)
 
 	return provider

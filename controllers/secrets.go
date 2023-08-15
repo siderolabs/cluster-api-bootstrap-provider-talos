@@ -8,11 +8,13 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/siderolabs/crypto/x509"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
-	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/siderolabs/talos/pkg/machinery/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
+	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +28,7 @@ import (
 
 func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstrapv1alpha3.TalosConfig, secretName string) (*corev1.Secret, error) {
 	retSecret := &corev1.Secret{}
-	err := r.Client.Get(context.Background(), client.ObjectKey{
+	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: config.GetNamespace(),
 		Name:      secretName,
 	}, retSecret)
@@ -39,8 +41,8 @@ func (r *TalosConfigReconciler) fetchSecret(ctx context.Context, config *bootstr
 }
 
 // getSecretsBundle either generates or loads existing secret.
-func (r *TalosConfigReconciler) getSecretsBundle(ctx context.Context, scope *TalosConfigScope, allowGenerate bool, opts ...generate.GenOption) (*generate.SecretsBundle, error) {
-	var secretsBundle *generate.SecretsBundle
+func (r *TalosConfigReconciler) getSecretsBundle(ctx context.Context, scope *TalosConfigScope, allowGenerate bool, versionContract *config.VersionContract) (*secrets.Bundle, error) {
+	var secretsBundle *secrets.Bundle
 
 	secretName := scope.Cluster.Name + "-talos"
 
@@ -54,7 +56,7 @@ retry:
 		}
 
 		// no cluster secret yet, generate new one
-		secretsBundle, err = generate.NewSecretsBundle(generate.NewClock(), opts...)
+		secretsBundle, err = secrets.NewBundle(secrets.NewFixedClock(time.Now()), versionContract)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new secrets bundle: %w", err)
 		}
@@ -71,8 +73,8 @@ retry:
 		return nil, fmt.Errorf("error reading secrets bundle: %w", err)
 	default:
 		// successfully loaded secret, initialize secretsBundle from it
-		secretsBundle = &generate.SecretsBundle{
-			Clock: generate.NewClock(),
+		secretsBundle = &secrets.Bundle{
+			Clock: secrets.NewFixedClock(time.Now()),
 		}
 
 		if _, ok := secret.Data["bundle"]; ok {
@@ -95,14 +97,14 @@ retry:
 			}
 
 			// not stored in legacy format, use empty values
-			secretsBundle.Cluster = &generate.Cluster{}
+			secretsBundle.Cluster = &secrets.Cluster{}
 		}
 	}
 
 	return secretsBundle, nil
 }
 
-func (r *TalosConfigReconciler) writeSecretsBundleSecret(ctx context.Context, scope *TalosConfigScope, secretName string, secretsBundle *generate.SecretsBundle) error {
+func (r *TalosConfigReconciler) writeSecretsBundleSecret(ctx context.Context, scope *TalosConfigScope, secretName string, secretsBundle *secrets.Bundle) error {
 	bundle, err := yaml.Marshal(secretsBundle)
 	if err != nil {
 		return fmt.Errorf("error marshaling secrets bundle: %w", err)
@@ -225,7 +227,7 @@ func (r *TalosConfigReconciler) reconcileClientConfig(ctx context.Context, log l
 
 	sort.Strings(endpoints)
 
-	secretBundle, err := r.getSecretsBundle(ctx, scope, false)
+	secretBundle, err := r.getSecretsBundle(ctx, scope, false, defaultVersionContract) // version contract doesn't matter, as we're getting the secrets
 	if err != nil {
 		return err
 	}

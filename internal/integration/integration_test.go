@@ -12,8 +12,10 @@ import (
 	"time"
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
-	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
+	"github.com/siderolabs/talos/pkg/machinery/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
+	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -260,16 +262,16 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
 
-		secretsBundle, err := generate.NewSecretsBundle(generate.NewClock())
+		secretsBundle, err := secrets.NewBundle(secrets.NewFixedClock(time.Now()), config.TalosVersionCurrent)
 		require.NoError(t, err)
 
-		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", "v1.22.2", secretsBundle)
+		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", "v1.22.2", generate.WithSecretsBundle(secretsBundle))
 		require.NoError(t, err)
 
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 
 		for i := 0; i < 4; i++ {
-			machineconfig, err := generate.Config(talosmachine.TypeWorker, input)
+			machineconfig, err := input.Config(talosmachine.TypeWorker)
 			require.NoError(t, err)
 
 			configdata, err := machineconfig.Bytes()
@@ -293,7 +295,7 @@ func TestIntegration(t *testing.T) {
 				machineType = talosmachine.TypeControlPlane
 			}
 
-			machineconfig, err := generate.Config(machineType, input)
+			machineconfig, err := input.Config(machineType)
 			require.NoError(t, err)
 
 			configdata, err := machineconfig.Bytes()

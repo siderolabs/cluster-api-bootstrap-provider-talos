@@ -15,8 +15,8 @@ import (
 	"time"
 
 	talosclientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
-	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
-	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
+	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/machine"
+	"github.com/siderolabs/talos/pkg/machinery/config/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -284,4 +284,4 @@ func (m runtimeMode) RequiresInstall() bool {
 }
 
 // check interface
-var _ machineconfig.RuntimeMode = runtimeMode{}
+var _ validation.RuntimeMode = runtimeMode{}

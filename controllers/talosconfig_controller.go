@@ -16,12 +16,13 @@ import (
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
 	"github.com/siderolabs/talos/pkg/machinery/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
+	"github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/machine"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/role"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,11 +36,11 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
@@ -81,36 +82,34 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		WithOptions(options).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Watches(
-			&source.Kind{Type: &capiv1.Machine{}},
+			&capiv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
 		)
 
 	if feature.Gates.Enabled(feature.MachinePool) {
 		b = b.Watches(
-			&source.Kind{Type: &expv1.MachinePool{}},
+			&expv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(r.MachinePoolToBootstrapMapFunc),
 		).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
-
 	}
 
-	c, err := b.Build(r)
-	if err != nil {
-		return err
-	}
-
-	err = c.Watch(
-		&source.Kind{Type: &capiv1.Cluster{}},
+	b = b.Watches(
+		&capiv1.Cluster{},
 		handler.EnqueueRequestsFromMapFunc(r.ClusterToTalosConfigs),
-		predicates.All(ctrl.LoggerFrom(ctx),
-			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
-			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue),
+		builder.WithPredicates(
+			predicates.All(ctrl.LoggerFrom(ctx),
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+				predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue),
+			),
 		),
 	)
-	if err != nil {
-		return err
+
+	if err := b.Complete(r); err != nil {
+		return fmt.Errorf("failed setting up with a controller manager: %w", err)
 	}
 
 	return nil
+
 }
 
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -361,27 +360,13 @@ func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *boo
 	return ctrl.Result{}, nil
 }
 
-func genTalosConfigFile(clusterName string, bundle *generate.SecretsBundle, endpoints []string) (string, error) {
-	in := &generate.Input{
-		ClusterName: clusterName,
-		Certs: &generate.Certs{
-			OS: bundle.Certs.OS,
-		},
-	}
-
-	var err error
-
-	in.Certs.Admin, err = generate.NewAdminCertificateAndKey(
-		bundle.Clock.Now(),
-		bundle.Certs.OS,
-		role.MakeSet(role.Admin),
-		87600*time.Hour,
-	)
+func genTalosConfigFile(clusterName string, bundle *secrets.Bundle, endpoints []string) (string, error) {
+	in, err := generate.NewInput(clusterName, "https://localhost", "", generate.WithSecretsBundle(bundle), generate.WithEndpointList(endpoints))
 	if err != nil {
 		return "", err
 	}
 
-	talosConfig, err := generate.Talosconfig(in, generate.WithEndpointList(endpoints))
+	talosConfig, err := in.Talosconfig()
 	if err != nil {
 		return "", err
 	}
@@ -398,8 +383,7 @@ func genTalosConfigFile(clusterName string, bundle *generate.SecretsBundle, endp
 func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosConfigScope) (*TalosConfigBundle, error) {
 	retBundle := &TalosConfigBundle{}
 
-	userConfig := &v1alpha1.Config{}
-	err := yaml.Unmarshal([]byte(scope.Config.Spec.Data), userConfig)
+	userConfig, err := configloader.NewFromBytes([]byte(scope.Config.Spec.Data))
 	if err != nil {
 		return retBundle, err
 	}
@@ -420,7 +404,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 	retBundle.BootstrapData = userConfigStr
 
 	if userConfig.Machine().Security().CA() != nil && len(userConfig.Machine().Security().CA().Crt) > 0 && len(userConfig.Machine().Security().CA().Key) > 0 {
-		bundle := generate.NewSecretsBundleFromConfig(generate.NewClock(), userConfig)
+		bundle := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), userConfig)
 
 		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.Cluster().Name(), bundle, nil)
 		if err != nil {
@@ -468,7 +452,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		clusterDNS = scope.Cluster.Spec.ClusterNetwork.ServiceDomain
 	}
 
-	genOptions := []generate.GenOption{generate.WithDNSDomain(clusterDNS)}
+	genOptions := []generate.Option{generate.WithDNSDomain(clusterDNS)}
 
 	versionContract := defaultVersionContract
 
@@ -482,10 +466,12 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	genOptions = append(genOptions, generate.WithVersionContract(versionContract))
 
-	secretBundle, err := r.getSecretsBundle(ctx, scope, true, genOptions...)
+	secretBundle, err := r.getSecretsBundle(ctx, scope, true, versionContract)
 	if err != nil {
 		return retBundle, err
 	}
+
+	genOptions = append(genOptions, generate.WithSecretsBundle(secretBundle))
 
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
 
@@ -493,7 +479,6 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		scope.Cluster.Name,
 		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
 		k8sVersion,
-		secretBundle,
 		genOptions...,
 	)
 	if err != nil {
@@ -501,7 +486,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	}
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
-	if err = r.writeK8sCASecret(ctx, scope, input.Certs.K8s); err != nil {
+	if err = r.writeK8sCASecret(ctx, scope, secretBundle.Certs.K8s); err != nil {
 		return retBundle, err
 	}
 
@@ -512,24 +497,24 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	retBundle.TalosConfig = tcString
 
-	data, err := generate.Config(machineType, input)
+	data, err := input.Config(machineType)
 	if err != nil {
 		return retBundle, err
 	}
 
 	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.Pods != nil {
-		data.ClusterConfig.ClusterNetwork.PodSubnet = scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
+		data.RawV1Alpha1().ClusterConfig.ClusterNetwork.PodSubnet = scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
 	}
 	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.Services != nil {
-		data.ClusterConfig.ClusterNetwork.ServiceSubnet = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
+		data.RawV1Alpha1().ClusterConfig.ClusterNetwork.ServiceSubnet = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
 	}
 
 	if !scope.ConfigOwner.IsMachinePool() && scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
-		if data.MachineConfig.MachineNetwork == nil {
-			data.MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
+		if data.RawV1Alpha1().MachineConfig.MachineNetwork == nil {
+			data.RawV1Alpha1().MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
 		}
 
-		data.MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+		data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
 	}
 
 	dataOut, err := data.EncodeString()
@@ -544,7 +529,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 // MachineToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
 // request for reconciliation of TalosConfig.
-func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o client.Object) []ctrl.Request {
+func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(_ context.Context, o client.Object) []ctrl.Request {
 	m, ok := o.(*capiv1.Machine)
 	if !ok {
 		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
@@ -560,7 +545,7 @@ func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(o client.Object) []ctr
 
 // MachinePoolToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
 // request for reconciliation of TalosConfig.
-func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o client.Object) []ctrl.Request {
+func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(_ context.Context, o client.Object) []ctrl.Request {
 	m, ok := o.(*expv1.MachinePool)
 	if !ok {
 		panic(fmt.Sprintf("Expected a MachinePool but got a %T", o))
@@ -577,7 +562,7 @@ func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(o client.Object) [
 
 // ClusterToTalosConfigs is a handler.ToRequestsFunc to be used to enqeue
 // requests for reconciliation of TalosConfigs.
-func (r *TalosConfigReconciler) ClusterToTalosConfigs(o client.Object) []ctrl.Request {
+func (r *TalosConfigReconciler) ClusterToTalosConfigs(ctx context.Context, o client.Object) []ctrl.Request {
 	result := []ctrl.Request{}
 
 	c, ok := o.(*capiv1.Cluster)
@@ -593,7 +578,7 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(o client.Object) []ctrl.Re
 	}
 
 	machineList := &capiv1.MachineList{}
-	if err := r.Client.List(context.TODO(), machineList, selectors...); err != nil {
+	if err := r.Client.List(ctx, machineList, selectors...); err != nil {
 		return nil
 	}
 
@@ -607,7 +592,7 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(o client.Object) []ctrl.Re
 
 	if feature.Gates.Enabled(feature.MachinePool) {
 		machinePoolList := &expv1.MachinePoolList{}
-		if err := r.Client.List(context.TODO(), machinePoolList, selectors...); err != nil {
+		if err := r.Client.List(ctx, machinePoolList, selectors...); err != nil {
 			return nil
 		}
 
