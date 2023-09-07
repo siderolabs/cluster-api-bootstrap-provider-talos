@@ -1,3 +1,35 @@
+## [CAPI Bootstrap Provider Talos 0.6.2](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.2) (2023-09-07)
+
+Welcome to the v0.6.2 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos 1.5
+
+CABPT now supports machine configuration generation for Talos 1.5.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`100d3d5`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/100d3d521e3db90b6449752e2d1e51dff43d25bd) fix: update Talos machinery to 1.5.2
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos/pkg/machinery**  v1.5.0 -> v1.5.2
+
+Previous release can be found at [v0.6.1](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.1)
+
 ## [CAPI Bootstrap Provider Talos 0.6.1](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.1) (2023-08-17)
 
 Welcome to the v0.6.1 release of CAPI Bootstrap Provider Talos!
