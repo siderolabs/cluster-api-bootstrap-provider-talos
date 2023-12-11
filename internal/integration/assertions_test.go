@@ -7,13 +7,14 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/siderolabs/go-pointer"
 	talosclientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
 	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1/generate"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
 	"github.com/siderolabs/talos/pkg/machinery/config/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,10 +101,10 @@ func assertControllerSecret(ctx context.Context, t *testing.T, c client.Client, 
 	assert.NotEmpty(t, talosSecret.Data["bundle"])
 
 	// cross-checks
-	secretsBundle := generate.NewSecretsBundleFromConfig(generate.NewClock(), provider)
+	secretsBundle := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), provider)
 	secretsBundle.Clock = nil
 
-	var savedBundle generate.SecretsBundle
+	var savedBundle secrets.Bundle
 	require.NoError(t, yaml.Unmarshal(talosSecret.Data["bundle"], &savedBundle))
 	assert.Equal(t, *secretsBundle, savedBundle)
 }
@@ -116,10 +117,12 @@ func assertSameMachineConfigSecrets(ctx context.Context, t *testing.T, c client.
 		providers[i] = assertMachineConfiguration(ctx, t, c, talosConfigs[i])
 	}
 
-	secretsBundle0 := generate.NewSecretsBundleFromConfig(generate.NewClock(), providers[0])
+	clock := secrets.NewFixedClock(time.Now())
+
+	secretsBundle0 := secrets.NewBundleFromConfig(clock, providers[0])
 
 	for _, provider := range providers[1:] {
-		assert.Equal(t, secretsBundle0, generate.NewSecretsBundleFromConfig(generate.NewClock(), provider))
+		assert.Equal(t, secretsBundle0, secrets.NewBundleFromConfig(clock, provider))
 	}
 }
 

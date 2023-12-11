@@ -54,19 +54,21 @@ This provider's versions are compatible with the following versions of Cluster A
 
 This provider's versions are able to install and manage the following versions of Kubernetes:
 
-|                | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 | v1.24 | v1.25 | v1.26 | v1.27 | v1.28 |
-| -------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.5.x) | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |       |       |
-| CABPT (v0.6.x) |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     |
+|                | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 | v1.24 | v1.25 | v1.26 | v1.27 | v1.28 | v1.29 |
+| -------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.5.x) | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |       |       |       |
+| CABPT (v0.6.x) |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 This provider's versions are compatible with the following versions of Talos:
 
-|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  |
-| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |
-| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     |
+|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  | v1.6  |
+| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |
+| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     |
 
-CABPT generates machine configuration compatible with Talos version specified in the `talosVersion:` field (see below).
+> Note: CABPT is not compatible with multi-document Talos Linux machine configuration, as it relies on JSON patch to apply configuration patches.
+
+CABPT generates machine configuration compatible with Talos Linux version specified in the `talosVersion:` field (see below).
 
 ## Usage
 
@@ -82,7 +84,7 @@ spec:
   controlPlaneConfig:
     controlplane:
       generateType: controlplane
-      talosVersion: v1.1
+      talosVersion: v1.6
   ...
 ```
 
@@ -95,7 +97,7 @@ spec:
   template:
     spec:
       generateType: worker
-      talosVersion: v1.1
+      talosVersion: v1.6
 ```
 
 Fields available in the `TalosConfigTemplate` (and `TalosConfig`) resources:
@@ -148,7 +150,7 @@ The format of these patches is based on [JSON 6902](http://jsonpatch.com/) that 
 ```yaml
 spec:
   generateType: controlplane
-  talosVersion: v1.5
+  talosVersion: v1.6
   configPatches:
     - op: replace
       path: /machine/install

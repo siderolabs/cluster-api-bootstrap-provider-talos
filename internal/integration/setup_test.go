@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/controllers"
@@ -81,10 +82,13 @@ func setupSuite(t *testing.T) (context.Context, client.Client) {
 	waitForCAPIAvailability(ctx, t, c)
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
-		MetricsBindAddress: "0",
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
+		WebhookServer: webhook.NewServer(
+			webhook.Options{
+				CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+				Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+				Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+			},
+		),
 	})
 	require.NoError(t, err)
 
@@ -201,7 +205,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 	// t.FailNow() should be called in the main goroutine.
 	initErr := make(chan error, 1)
 	go func() {
-		clusterctlClient, err := clusterctlclient.New("")
+		clusterctlClient, err := clusterctlclient.New(ctx, "")
 		if err != nil {
 			initErr <- err
 			return
@@ -217,7 +221,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 
 		if false {
 			// TODO: InitImages is broken in upstream, see https://github.com/kubernetes-sigs/cluster-api/issues/6986
-			images, err := clusterctlClient.InitImages(initOpts)
+			images, err := clusterctlClient.InitImages(ctx, initOpts)
 			if err != nil {
 				initErr <- err
 				return
@@ -226,7 +230,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 			t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
 		}
 
-		_, err = clusterctlClient.Init(initOpts)
+		_, err = clusterctlClient.Init(ctx, initOpts)
 		initErr <- err
 	}()
 
