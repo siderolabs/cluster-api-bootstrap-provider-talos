@@ -1,3 +1,46 @@
+## [CAPI Bootstrap Provider Talos 0.6.3](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.3) (2023-12-15)
+
+Welcome to the v0.6.3 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos 1.6
+
+CABPT now supports machine configuration generation for Talos 1.6.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`540603a`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/540603ae0b3527c022db0514bcfaa862272a0dbe) feat: update to Talos 1.6.0
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/evanphx/json-patch**              v5.6.0 -> v5.7.0
+* **github.com/go-logr/logr**                    v1.2.4 -> v1.3.0
+* **github.com/google/go-cmp**                   v0.5.9 -> v0.6.0
+* **github.com/siderolabs/talos/pkg/machinery**  v1.5.2 -> v1.6.0
+* **golang.org/x/sys**                           v0.10.0 -> e4099bfacb8c
+* **k8s.io/api**                                 v0.27.2 -> v0.28.4
+* **k8s.io/apiextensions-apiserver**             v0.27.2 -> v0.28.4
+* **k8s.io/apimachinery**                        v0.27.2 -> v0.28.4
+* **k8s.io/client-go**                           v0.27.2 -> v0.28.4
+* **k8s.io/component-base**                      v0.28.4 **_new_**
+* **sigs.k8s.io/cluster-api**                    v1.5.0 -> v1.6.0
+* **sigs.k8s.io/controller-runtime**             v0.15.0 -> v0.16.3
+
+Previous release can be found at [v0.6.2](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.2)
+
 ## [CAPI Bootstrap Provider Talos 0.6.2](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.2) (2023-09-07)
 
 Welcome to the v0.6.2 release of CAPI Bootstrap Provider Talos!
