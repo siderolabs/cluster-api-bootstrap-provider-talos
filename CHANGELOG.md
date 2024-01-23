@@ -1,3 +1,30 @@
+## [CAPI Bootstrap Provider Talos 0.6.4](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.4) (2024-01-23)
+
+Welcome to the v0.6.4 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`604978d`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/604978dc6f6b78c7e966542ed9bf89168e3d8a16) fix: set a default controller runtime log
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.6.3](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.3)
+
 ## [CAPI Bootstrap Provider Talos 0.6.3](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.3) (2023-12-15)
 
 Welcome to the v0.6.3 release of CAPI Bootstrap Provider Talos!
