@@ -145,7 +145,15 @@ spec:
 Machine configuration can be customized by applying configuration patches.
 Any field of the [Talos machine configuration](https://www.talos.dev/docs/latest/reference/configuration/)
 can be overridden on a per-machine basis using this method.
-The format of these patches is based on [JSON 6902](http://jsonpatch.com/) that you may be used to in tools like `kustomize`.
+
+There are two [patch formats](https://www.talos.dev/latest/talos-guides/configuration/patching/) supported by CABPT:
+
+- the [JSON 6902](http://jsonpatch.com/) format that you may be used to in tools like `kustomize`;
+- strategic merge patches which look like incomplete machine configuration documents.
+
+See Talos Linux documentation for more information on patching.
+
+JSON 6902 patch:
 
 ```yaml
 spec:
@@ -162,6 +170,26 @@ spec:
         name: custom
         urls:
           - https://docs.projectcalico.org/v3.18/manifests/calico.yaml
+```
+
+Strategic merge patch:
+
+```yaml
+spec:
+  generateType: controlplane
+  talosVersion: v1.6
+  strategicPatches:
+    - |
+      machine:
+        install:
+          disk: /dev/sda
+    - |
+      cluster:
+        network:
+          cni:
+            name: custom
+            urls:
+              - https://docs.projectcalico.org/v3.18/manifests/calico.yaml
 ```
 
 ### Retrieving `talosconfig`

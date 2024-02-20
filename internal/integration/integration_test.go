@@ -217,6 +217,30 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, []string{"myserver.com"}, provider.Machine().Security().CertSANs())
 	})
 
+	t.Run("StrategicMergePatch", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeInit.String(),
+			TalosVersion: TalosVersion,
+			StrategicPatches: []string{
+				"machine:\n  network:\n    hostname: foo.bar",
+				"machine:\n  time:\n    servers: [time.cloudflare.com]",
+			},
+		})
+
+		createMachine(ctx, t, c, cluster, talosConfig, true)
+		waitForReady(ctx, t, c, talosConfig)
+
+		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+		assert.Equal(t, "foo.bar", provider.Machine().Network().Hostname())
+		assert.Equal(t, []string{"time.cloudflare.com"}, provider.Machine().Time().Servers())
+	})
+
 	t.Run("LegacyClusterSecret", func(t *testing.T) {
 		t.Parallel()
 

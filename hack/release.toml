@@ -6,7 +6,7 @@ github_repo = "siderolabs/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.6.3"
+previous = "v0.6.4"
 
 pre_release = false
 
@@ -15,3 +15,8 @@ preface = """\
 
 [notes]
 
+[notes.patches]
+    title = "Patches"
+        description = """\
+CABPT now supports Talos Linux machine configuration strategic merge patches via 'strategicPatches' field on the `TalosConfig` CRD.
+"""

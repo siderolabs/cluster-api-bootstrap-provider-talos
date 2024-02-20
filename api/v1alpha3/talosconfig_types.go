@@ -20,6 +20,8 @@ type TalosConfigSpec struct {
 	GenerateType  string          `json:"generateType"`           //none,init,controlplane,worker mutually exclusive w/ data
 	Data          string          `json:"data,omitempty"`
 	ConfigPatches []ConfigPatches `json:"configPatches,omitempty"`
+	// Talos Linux machine configuration strategic merge patch list.
+	StrategicPatches []string `json:"strategicPatches,omitempty"`
 	// Set hostname in the machine configuration to some value.
 	Hostname HostnameSpec `json:"hostname,omitempty"`
 	// Important: Run "make" to regenerate code after modifying this file

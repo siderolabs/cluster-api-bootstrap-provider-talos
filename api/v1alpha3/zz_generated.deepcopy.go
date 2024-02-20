@@ -113,6 +113,11 @@ func (in *TalosConfigSpec) DeepCopyInto(out *TalosConfigSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.StrategicPatches != nil {
+		in, out := &in.StrategicPatches, &out.StrategicPatches
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	out.Hostname = in.Hostname
 }
 

@@ -129,6 +129,12 @@ spec:
                       Allowed values: "MachineName" (use linked Machine's Name).
                     type: string
                 type: object
+              strategicPatches:
+                description: Talos Linux machine configuration strategic merge patch
+                  list.
+                items:
+                  type: string
+                type: array
               talosVersion:
                 type: string
             required:

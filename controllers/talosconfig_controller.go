@@ -298,7 +298,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 		return fmt.Errorf("unknown generate type specified: %q", config.Spec.GenerateType)
 	}
 
-	// Handle patches to the machine config if they were specified
+	// Handle JSON6902 patches to the machine config if they were specified
 	// Note this will patch both pre-generated and user-provided configs.
 	if len(config.Spec.ConfigPatches) > 0 {
 		marshalledPatches, err := json.Marshal(config.Spec.ConfigPatches)
@@ -317,6 +317,32 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 		}
 
 		retData.BootstrapData = string(patchedBytes)
+	}
+
+	// Handle strategic merge patches.
+	if len(config.Spec.StrategicPatches) > 0 {
+		patches := make([]configpatcher.Patch, 0, len(config.Spec.StrategicPatches))
+
+		for _, strategicPatch := range config.Spec.StrategicPatches {
+			patch, err := configpatcher.LoadPatch([]byte(strategicPatch))
+			if err != nil {
+				return fmt.Errorf("failure loading StrategicPatch: %w", err)
+			}
+
+			patches = append(patches, patch)
+		}
+
+		out, err := configpatcher.Apply(configpatcher.WithBytes([]byte(retData.BootstrapData)), patches)
+		if err != nil {
+			return fmt.Errorf("failure applying StrategicPatches: %w", err)
+		}
+
+		outBytes, err := out.Bytes()
+		if err != nil {
+			return fmt.Errorf("failure converting result to bytes: %w", err)
+		}
+
+		retData.BootstrapData = string(outBytes)
 	}
 
 	// Packet acts a fool if you don't prepend #!talos to the userdata
