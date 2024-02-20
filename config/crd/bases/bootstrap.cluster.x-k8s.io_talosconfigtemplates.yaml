@@ -84,6 +84,9 @@ spec:
                   spec:
                     description: TalosConfigSpec defines the desired state of TalosConfig
                     properties:
+                      configPatch:
+                        description: strategic merge patch
+                        type: string
                       configPatches:
                         items:
                           properties:
