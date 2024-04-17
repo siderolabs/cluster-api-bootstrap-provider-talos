@@ -390,8 +390,8 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
 	// but do this only when machineconfig contains full Kubernetes CA secret (controlplane nodes)
-	if userConfig.Cluster().CA() != nil && len(userConfig.Cluster().CA().Crt) > 0 && len(userConfig.Cluster().CA().Key) > 0 {
-		if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().CA()); err != nil {
+	if userConfig.Cluster().IssuingCA() != nil && len(userConfig.Cluster().IssuingCA().Crt) > 0 && len(userConfig.Cluster().IssuingCA().Key) > 0 {
+		if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().IssuingCA()); err != nil {
 			return retBundle, err
 		}
 	}
@@ -403,7 +403,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 
 	retBundle.BootstrapData = userConfigStr
 
-	if userConfig.Machine().Security().CA() != nil && len(userConfig.Machine().Security().CA().Crt) > 0 && len(userConfig.Machine().Security().CA().Key) > 0 {
+	if userConfig.Machine().Security().IssuingCA() != nil && len(userConfig.Machine().Security().IssuingCA().Crt) > 0 && len(userConfig.Machine().Security().IssuingCA().Key) > 0 {
 		bundle := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), userConfig)
 
 		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.Cluster().Name(), bundle, nil)

@@ -84,8 +84,8 @@ func assertClusterCA(ctx context.Context, t *testing.T, c client.Client, cluster
 	assert.NotEmpty(t, caSecret.Data[corev1.TLSCertKey])
 	assert.NotEmpty(t, caSecret.Data[corev1.TLSPrivateKeyKey])
 
-	assert.Equal(t, provider.Cluster().CA().Crt, caSecret.Data[corev1.TLSCertKey])
-	assert.Equal(t, provider.Cluster().CA().Key, caSecret.Data[corev1.TLSPrivateKeyKey])
+	assert.Equal(t, provider.Cluster().IssuingCA().Crt, caSecret.Data[corev1.TLSCertKey])
+	assert.Equal(t, provider.Cluster().IssuingCA().Key, caSecret.Data[corev1.TLSPrivateKeyKey])
 }
 
 // assertControllerSecret checks that persisted controller secret (used to bootstrap more machines with same secrets) maches generated controlplane config.
@@ -136,13 +136,13 @@ func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.
 
 	checks := []func(p machineconfig.Provider) interface{}{
 		func(p machineconfig.Provider) interface{} { return p.Machine().Security().Token() },
-		func(p machineconfig.Provider) interface{} { return p.Machine().Security().CA().Crt },
+		func(p machineconfig.Provider) interface{} { return p.Machine().Security().IssuingCA().Crt },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().ID() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Secret() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Endpoint().String() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().ID() },
 		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().Secret() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().CA().Crt },
+		func(p machineconfig.Provider) interface{} { return p.Cluster().IssuingCA().Crt },
 	}
 
 	for _, check := range checks {

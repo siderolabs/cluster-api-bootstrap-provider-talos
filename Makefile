@@ -9,13 +9,13 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 TEST_RUN ?= ./...
 
-TOOLS ?= ghcr.io/siderolabs/tools:v1.6.0-1-g336d248
-PKGS ?= v1.6.0-3-g617d342
-TALOS_VERSION ?= v1.6.0
-K8S_VERSION ?= 1.28.4
+TOOLS ?= ghcr.io/siderolabs/tools:v1.7.0-1-g10b2a69
+PKGS ?= v1.7.0-5-gb7f1920
+TALOS_VERSION ?= v1.7.0-beta.1
+K8S_VERSION ?= 1.29.3
 
-CONTROLLER_GEN_VERSION ?= v0.13.0
-CONVERSION_GEN_VERSION ?= v0.28.4
+CONTROLLER_GEN_VERSION ?= v0.14.0
+CONVERSION_GEN_VERSION ?= v0.29.3
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
