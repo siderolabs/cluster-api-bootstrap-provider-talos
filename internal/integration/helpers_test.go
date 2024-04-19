@@ -283,5 +283,9 @@ func (m runtimeMode) RequiresInstall() bool {
 	return m.requiresInstall
 }
 
+func (m runtimeMode) InContainer() bool {
+	return false
+}
+
 // check interface
 var _ validation.RuntimeMode = runtimeMode{}

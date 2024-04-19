@@ -5,7 +5,7 @@ name: default
 
 services:
   - name: docker
-    image: ghcr.io/smira/docker:20.10-dind-hacked
+    image: docker:25.0.2-dind
     entrypoint: [dockerd]
     privileged: true
     volumes:
@@ -183,6 +183,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 08c8794304be76a3ddf7d3fd138b79c792dd747c9d57004e7836363fb0985e32
+hmac: 5c1bc5de4536d2687cad4a32a3f244af6480bd306265dd11e146e1e0769f15a1
 
 ...
