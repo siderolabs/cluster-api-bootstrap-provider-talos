@@ -1,3 +1,61 @@
+## [CAPI Bootstrap Provider Talos 0.6.5](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.5) (2024-04-19)
+
+Welcome to the v0.6.5 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Patches
+
+CABPT now supports Talos Linux machine configuration strategic merge patches via 'strategicPatches' field on the `TalosConfig` CRD.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Ksawery Kuczyński
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`d0de67b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/d0de67bae46c7969efa19bc8a35516fe196c3de5) feat: update Talos to final 1.7.0
+* [`77a404e`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/77a404e76c05f218ba372cf847331c665a5f01b9) feat: support for strategic merge patches
+* [`171daf4`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/171daf47dbfa01cc8ef4ab4e116db2385d13f5a5) feat: update Talos to v1.7.0-beta.1
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>3 commits</summary>
+<p>
+
+* [`c240482`](https://github.com/siderolabs/crypto/commit/c2404820ab1c1346c76b5b0f9b7632ca9d51e547) feat: provide dynamic client CA matching
+* [`2f4f911`](https://github.com/siderolabs/crypto/commit/2f4f911da321ade3cedacc3b6abfef5f119f7508) feat: add PEMEncodedCertificate wrapper
+* [`1c94bb3`](https://github.com/siderolabs/crypto/commit/1c94bb3967a427ba52c779a1b705f5aea466dc57) chore: bump dependencies
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/evanphx/json-patch**              v5.7.0 -> v5.9.0
+* **github.com/go-logr/logr**                    v1.3.0 -> v1.4.1
+* **github.com/siderolabs/crypto**               v0.4.1 -> v0.4.4
+* **github.com/siderolabs/talos/pkg/machinery**  v1.6.0 -> v1.7.0
+* **github.com/stretchr/testify**                v1.8.4 -> v1.9.0
+* **golang.org/x/sys**                           e4099bfacb8c -> v0.19.0
+* **k8s.io/api**                                 v0.28.4 -> v0.29.3
+* **k8s.io/apiextensions-apiserver**             v0.28.4 -> v0.29.3
+* **k8s.io/apimachinery**                        v0.28.4 -> v0.29.3
+* **k8s.io/client-go**                           v0.28.4 -> v0.29.3
+* **k8s.io/component-base**                      v0.28.4 -> v0.29.3
+* **k8s.io/klog/v2**                             v2.110.1 **_new_**
+* **sigs.k8s.io/cluster-api**                    v1.6.0 -> v1.7.0
+* **sigs.k8s.io/controller-runtime**             v0.16.3 -> v0.17.3
+
+Previous release can be found at [v0.6.4](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.4)
+
 ## [CAPI Bootstrap Provider Talos 0.6.4](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.4) (2024-01-23)
 
 Welcome to the v0.6.4 release of CAPI Bootstrap Provider Talos!
