@@ -60,7 +60,7 @@ func generateName(t *testing.T, kind string) string {
 }
 
 // createCluster creates a Cluster with "ready" infrastructure.
-func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec *capiv1.ClusterSpec, infrastructureReady bool) *capiv1.Cluster {
+func createCluster(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec *capiv1.ClusterSpec) *capiv1.Cluster {
 	t.Helper()
 
 	clusterName := generateName(t, "cluster")
@@ -84,14 +84,6 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 	}
 
 	require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
-
-	if infrastructureReady {
-		patchHelper, err := patch.NewHelper(cluster, c)
-		require.NoError(t, err)
-
-		cluster.Status.InfrastructureReady = true
-		require.NoError(t, patchHelper.Patch(ctx, cluster))
-	}
 
 	return cluster
 }

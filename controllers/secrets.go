@@ -178,7 +178,7 @@ func (r *TalosConfigReconciler) writeBootstrapData(ctx context.Context, scope *T
 		return dataSecretName, nil
 	}
 
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if !k8serrors.IsNotFound(err) {
 		return dataSecretName, err
 	}
 

@@ -172,7 +172,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Handle deleted talosconfigs
 	// We no longer set finalizers on talosconfigs, but we have to remove previously set finalizers
 	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, config)
+		return r.reconcileDelete(config)
 	}
 
 	// Look up the resource that owns this talosconfig if there is one
@@ -254,7 +254,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if err = r.reconcileGenerate(ctx, tcScope); err != nil {
-		conditions.MarkFalse(config, bootstrapv1alpha3.DataSecretAvailableCondition, bootstrapv1alpha3.DataSecretGenerationFailedReason, capiv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(config, bootstrapv1alpha3.DataSecretAvailableCondition, bootstrapv1alpha3.DataSecretGenerationFailedReason, capiv1.ConditionSeverityError, "%s", err.Error())
 
 		return ctrl.Result{}, err
 	}
@@ -380,7 +380,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 	return nil
 }
 
-func (r *TalosConfigReconciler) reconcileDelete(ctx context.Context, config *bootstrapv1alpha3.TalosConfig) (ctrl.Result, error) {
+func (r *TalosConfigReconciler) reconcileDelete(config *bootstrapv1alpha3.TalosConfig) (ctrl.Result, error) {
 	controllerutil.RemoveFinalizer(config, bootstrapv1alpha3.ConfigFinalizer)
 
 	return ctrl.Result{}, nil
@@ -498,6 +498,11 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	}
 
 	genOptions = append(genOptions, generate.WithSecretsBundle(secretBundle))
+
+	// Talos dropped support for version contracts <= 0.14, but we still need to support old secret bundles
+	if versionContract != nil && versionContract.Major < 1 && versionContract.Minor < 14 {
+		genOptions = append(genOptions, generate.WithClusterDiscovery(false))
+	}
 
 	APIEndpointPort := strconv.Itoa(int(scope.Cluster.Spec.ControlPlaneEndpoint.Port))
 

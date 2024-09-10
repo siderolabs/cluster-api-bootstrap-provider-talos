@@ -37,7 +37,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 		})
@@ -60,7 +60,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 		controlplaneMachines := []*capiv1.Machine{}
@@ -167,7 +167,7 @@ func TestIntegration(t *testing.T) {
 				Host: "example.com",
 				Port: 443,
 			},
-		}, true)
+		})
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
@@ -187,7 +187,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
@@ -221,7 +221,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
@@ -241,11 +241,33 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, []string{"time.cloudflare.com"}, provider.Machine().Time().Servers())
 	})
 
+	t.Run("StrategicMergePatchDelete", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
+
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeInit.String(),
+			TalosVersion: TalosVersion,
+			StrategicPatches: []string{
+				"cluster:\n  apiServer:\n    admissionControl:\n      - name: PodSecurity\n        $patch: delete\n",
+			},
+		})
+
+		createMachine(ctx, t, c, cluster, talosConfig, true)
+		waitForReady(ctx, t, c, talosConfig)
+
+		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+		assert.Empty(t, provider.Cluster().APIServer().AdmissionControl())
+	})
+
 	t.Run("LegacyClusterSecret", func(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
 		// create a secret which imitates legacy secret format.
 		clusterSecret := corev1.Secret{
@@ -284,7 +306,7 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
 		secretsBundle, err := secrets.NewBundle(secrets.NewFixedClock(time.Now()), config.TalosVersionCurrent)
 		require.NoError(t, err)
@@ -363,66 +385,11 @@ func TestIntegration(t *testing.T) {
 		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
 	})
 
-	t.Run("InfrastructureNotReady", func(t *testing.T) {
-		t.Parallel()
-
-		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, false)
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
-			GenerateType: talosmachine.TypeInit.String(),
-		})
-		createMachine(ctx, t, c, cluster, talosConfig, true)
-
-		// assert that controller reports condition
-
-		for ctx.Err() == nil {
-			key := types.NamespacedName{
-				Namespace: talosConfig.Namespace,
-				Name:      talosConfig.Name,
-			}
-
-			err := c.Get(ctx, key, talosConfig)
-			require.NoError(t, err)
-
-			if conditions.IsFalse(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) &&
-				conditions.GetReason(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) == bootstrapv1alpha3.WaitingForClusterInfrastructureReason {
-				break
-			}
-
-			t.Log("Waiting ...")
-			sleepCtx(ctx, 3*time.Second)
-		}
-
-		require.NoError(t, ctx.Err())
-
-		assert.Equal(t, capiv1.ConditionSeverityInfo, *conditions.GetSeverity(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
-
-		// patch to make infrastructure ready
-		patchHelper, err := patch.NewHelper(cluster, c)
-		require.NoError(t, err)
-
-		cluster.Status.InfrastructureReady = true
-		require.NoError(t, patchHelper.Patch(ctx, cluster))
-
-		waitForReady(ctx, t, c, talosConfig)
-
-		assertClientConfig(t, talosConfig)
-		assertClusterClientConfig(ctx, t, c, cluster)
-
-		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
-
-		assert.Equal(t, talosmachine.TypeInit, provider.Machine().Type())
-
-		assertClusterCA(ctx, t, c, cluster, provider)
-
-		assertControllerSecret(ctx, t, c, cluster, provider)
-	})
-
 	t.Run("BadConfigPatch", func(t *testing.T) {
 		t.Parallel()
 
 		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil, true)
+		cluster := createCluster(ctx, t, c, namespaceName, nil)
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
@@ -473,7 +440,7 @@ func TestIntegration(t *testing.T) {
 				Host: "example.com",
 				Port: 443,
 			},
-		}, true)
+		})
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: TalosVersion,
@@ -523,6 +490,7 @@ func TestIntegration(t *testing.T) {
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "is immutable"))
 	})
+
 	t.Run("TalosConfigTemplateValidate", func(t *testing.T) {
 		t.Parallel()
 

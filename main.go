@@ -42,8 +42,7 @@ var (
 	webhookPort          int
 	watchFilterValue     string
 	webhookCertDir       string
-	tlsOptions           = flags.TLSOptions{}
-	diagnosticsOptions   = flags.DiagnosticsOptions{}
+	managerOptions       = flags.ManagerOptions{}
 	logOptions           = logs.NewOptions()
 )
 
@@ -65,8 +64,7 @@ func InitFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&healthAddr, "health-addr", ":9440",
 		"The address the health endpoint binds to.")
 
-	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
-	flags.AddTLSOptions(fs, &tlsOptions)
+	flags.AddManagerOptions(fs, &managerOptions)
 
 	feature.MutableGates.AddFlag(fs)
 }
@@ -90,11 +88,9 @@ func main() {
 		BurstSize: 100,
 	})
 
-	diagnosticsOpts := flags.GetDiagnosticsOptions(diagnosticsOptions)
-
-	tlsOptionOverrides, err := flags.GetTLSOptionOverrideFuncs(tlsOptions)
+	tlsOptions, metricOpts, err := flags.GetManagerOptions(managerOptions)
 	if err != nil {
-		setupLog.Error(err, "unable to add TLS settings to the webhook server")
+		setupLog.Error(err, "unable to get manager options")
 		os.Exit(1)
 	}
 
@@ -104,7 +100,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-election-cabpt",
-		Metrics:                diagnosticsOpts,
+		Metrics:                *metricOpts,
 		EventBroadcaster:       broadcaster,
 		HealthProbeBindAddress: healthAddr,
 		Cache: cache.Options{
@@ -129,7 +125,7 @@ func main() {
 			webhook.Options{
 				Port:    webhookPort,
 				CertDir: webhookCertDir,
-				TLSOpts: tlsOptionOverrides,
+				TLSOpts: tlsOptions,
 			},
 		),
 	})
