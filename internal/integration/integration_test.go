@@ -13,6 +13,7 @@ import (
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
 	"github.com/siderolabs/talos/pkg/machinery/config"
+	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
 	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/machine"
@@ -320,12 +321,12 @@ func TestIntegration(t *testing.T) {
 			machineconfig, err := input.Config(talosmachine.TypeWorker)
 			require.NoError(t, err)
 
-			configdata, err := machineconfig.Bytes()
+			configdata, err := machineconfig.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 			require.NoError(t, err)
 
 			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: "none",
-				Data:         string(configdata),
+				Data:         configdata,
 			})
 			createMachine(ctx, t, c, cluster, talosConfig, true)
 
@@ -344,12 +345,12 @@ func TestIntegration(t *testing.T) {
 			machineconfig, err := input.Config(machineType)
 			require.NoError(t, err)
 
-			configdata, err := machineconfig.Bytes()
+			configdata, err := machineconfig.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 			require.NoError(t, err)
 
 			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: "none",
-				Data:         string(configdata),
+				Data:         configdata,
 			})
 			createMachine(ctx, t, c, cluster, talosConfig, false)
 

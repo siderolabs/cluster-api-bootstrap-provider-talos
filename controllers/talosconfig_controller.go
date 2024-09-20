@@ -18,6 +18,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
+	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
@@ -337,12 +338,15 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 			return fmt.Errorf("failure applying StrategicPatches: %w", err)
 		}
 
-		outBytes, err := out.Bytes()
+		outCfg, err := out.Config()
 		if err != nil {
 			return fmt.Errorf("failure converting result to bytes: %w", err)
 		}
 
-		retData.BootstrapData = string(outBytes)
+		retData.BootstrapData, err = outCfg.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
+		if err != nil {
+			return fmt.Errorf("failure converting config to string: %w", err)
+		}
 	}
 
 	// Packet acts a fool if you don't prepend #!talos to the userdata
@@ -422,7 +426,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 		}
 	}
 
-	userConfigStr, err := userConfig.EncodeString()
+	userConfigStr, err := userConfig.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 	if err != nil {
 		return retBundle, err
 	}
@@ -548,7 +552,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
 	}
 
-	dataOut, err := data.EncodeString()
+	dataOut, err := data.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 	if err != nil {
 		return retBundle, err
 	}

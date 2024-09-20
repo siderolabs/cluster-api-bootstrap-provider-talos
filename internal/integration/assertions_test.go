@@ -59,6 +59,8 @@ func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Clie
 
 	assert.Len(t, bootstrapDataSecret.Data, 1)
 
+	assert.Less(t, len(bootstrapDataSecret.Data["value"]), 32*1024) // 32KB limit on user-data size
+
 	provider, err := configloader.NewFromBytes(bootstrapDataSecret.Data["value"])
 	require.NoError(t, err)
 
