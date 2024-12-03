@@ -9,13 +9,13 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 TEST_RUN ?= ./...
 
-TOOLS ?= ghcr.io/siderolabs/tools:v1.8.0-1-ga0c06c6
-PKGS ?= v1.8.0
-TALOS_VERSION ?= v1.8.0
+TOOLS ?= ghcr.io/siderolabs/tools:v1.9.0
+PKGS ?= v1.9.0
+TALOS_VERSION ?= v1.9.0-beta.0
 K8S_VERSION ?= 1.30.1
 
 CONTROLLER_GEN_VERSION ?= v0.16.2
-CONVERSION_GEN_VERSION ?= v0.31.0
+CONVERSION_GEN_VERSION ?= v0.31.3
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
@@ -149,8 +149,7 @@ env-up: talosctl  ## Start development environment.
 		--name=cabpt-env \
 		--kubernetes-version=$(K8S_VERSION) \
 		--mtu=1450 \
-		--skip-kubeconfig \
-		--crashdump
+		--skip-kubeconfig
 	./talosctl kubeconfig kubeconfig \
 		--talosconfig=talosconfig \
 		--nodes=10.5.0.2 \
