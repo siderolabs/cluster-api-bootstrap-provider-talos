@@ -11,8 +11,8 @@ TEST_RUN ?= ./...
 
 TOOLS ?= ghcr.io/siderolabs/tools:v1.9.0
 PKGS ?= v1.9.0
-TALOS_VERSION ?= v1.9.0-beta.0
-K8S_VERSION ?= 1.30.1
+TALOS_VERSION ?= v1.9.0
+K8S_VERSION ?= 1.31.4
 
 CONTROLLER_GEN_VERSION ?= v0.16.2
 CONVERSION_GEN_VERSION ?= v0.31.3
