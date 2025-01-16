@@ -33,11 +33,16 @@ type HostnameSource string
 // HostnameSourceMachineName sets the hostname in the generated configuration to the machine name.
 const HostnameSourceMachineName HostnameSource = "MachineName"
 
+// HostnameSourceInfrastructureName sets the hostname in the generated configuration to the name of the machine's infrastructure.
+const HostnameSourceInfrastructureName HostnameSource = "InfrastructureName"
+
 // HostnameSpec defines the hostname source.
 type HostnameSpec struct {
 	// Source of the hostname.
 	//
-	// Allowed values: "MachineName" (use linked Machine's Name).
+	// Allowed values:
+	// "MachineName" (use linked Machine's Name).
+	// "InfrastructureName" (use linked Machine's infrastructure's name).
 	Source HostnameSource `json:"source,omitempty"`
 }
 

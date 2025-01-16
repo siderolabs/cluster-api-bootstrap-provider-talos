@@ -544,12 +544,22 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		data.RawV1Alpha1().ClusterConfig.ClusterNetwork.ServiceSubnet = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
 	}
 
-	if !scope.ConfigOwner.IsMachinePool() && scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
+	if !scope.ConfigOwner.IsMachinePool() && scope.Config.Spec.Hostname.Source != "" {
 		if data.RawV1Alpha1().MachineConfig.MachineNetwork == nil {
 			data.RawV1Alpha1().MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
 		}
 
-		data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
+			data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+		}
+
+		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceInfrastructureName {
+			machine := &capiv1.Machine{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, machine); err != nil {
+				return retBundle, err
+			}
+			data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = machine.Spec.InfrastructureRef.Name
+		}
 	}
 
 	dataOut, err := data.EncodeString(encoder.WithComments(encoder.CommentsDisabled))

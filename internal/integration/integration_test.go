@@ -456,6 +456,30 @@ func TestIntegration(t *testing.T) {
 
 		assert.Equal(t, machine.Name, provider.Machine().Network().Hostname())
 	})
+	t.Run("HostnameFromInfraName", func(t *testing.T) {
+		t.Parallel()
+
+		namespaceName := setupTest(ctx, t, c)
+		cluster := createCluster(ctx, t, c, namespaceName, &capiv1.ClusterSpec{
+			ControlPlaneEndpoint: capiv1.APIEndpoint{
+				Host: "example.com",
+				Port: 443,
+			},
+		})
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			GenerateType: talosmachine.TypeControlPlane.String(),
+			TalosVersion: TalosVersion,
+			Hostname: bootstrapv1alpha3.HostnameSpec{
+				Source: bootstrapv1alpha3.HostnameSourceInfrastructureName,
+			},
+		})
+		machine := createMachine(ctx, t, c, cluster, talosConfig, true)
+		waitForReady(ctx, t, c, talosConfig)
+
+		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+		assert.Equal(t, machine.Spec.InfrastructureRef.Name, provider.Machine().Network().Hostname())
+	})
 	t.Run("TalosConfigValidate", func(t *testing.T) {
 		t.Parallel()
 
