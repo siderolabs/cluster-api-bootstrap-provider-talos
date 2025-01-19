@@ -118,6 +118,10 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 					UID:        talosconfig.GetUID(),
 				},
 			},
+			InfrastructureRef: corev1.ObjectReference{
+				Name: generateName(t, "infrastructure"),
+				Namespace: cluster.Namespace,
+			},
 		},
 	}
 

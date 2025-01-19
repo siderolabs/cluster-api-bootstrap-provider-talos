@@ -120,7 +120,9 @@ spec:
                             description: |-
                               Source of the hostname.
 
-                              Allowed values: "MachineName" (use linked Machine's Name).
+                              Allowed values:
+                              "MachineName" (use linked Machine's Name).
+                              "InfrastructureName" (use linked Machine's infrastructure's name).
                             type: string
                         type: object
                       strategicPatches:
