@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -512,7 +513,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	input, err := generate.NewInput(
 		scope.Cluster.Name,
-		"https://"+scope.Cluster.Spec.ControlPlaneEndpoint.Host+":"+APIEndpointPort,
+		"https://"+net.JoinHostPort(scope.Cluster.Spec.ControlPlaneEndpoint.Host, APIEndpointPort),
 		k8sVersion,
 		genOptions...,
 	)
