@@ -1,0 +1,98 @@
+---
+kind: auto.CI
+spec:
+  compileGHWorkflowsOnly: true
+---
+kind: common.Repository
+spec:
+  licenseChecks:
+    - skipPaths:
+        - .git/
+        - testdata/
+      includeSuffixes:
+        - .go
+      excludeSuffixes:
+        - .pb.go
+        - _string.go
+        - _enumer.go
+        - _string_linux.go
+        - zz_generated.conversion.go
+        - zz_generated.deepcopy.go
+      header: |
+        // This Source Code Form is subject to the terms of the Mozilla Public
+        // License, v. 2.0. If a copy of the MPL was not distributed with this
+        // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+---
+kind: common.GHWorkflow
+spec:
+  jobs:
+    - name: default
+      buildxOptions:
+        enabled: true
+      runners:
+        - self-hosted
+        - generic
+      conditions:
+        - on-pull-request
+      steps:
+        - name: all
+          environment:
+            PLATFORM: linux/amd64,linux/arm64
+        - name: check-dirty
+        - name: env-up
+          environment:
+            INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
+        - name: release-manifests
+          environment:
+            INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
+        - name: test
+          environment:
+            INTEGRATION_SKIP_CLEANUP: 1 # make things a bit faster
+        - name: coverage
+          coverageStep:
+            files:
+              - _out/coverage.txt
+          timeoutMinutes: 3
+    - name: push
+      buildxOptions:
+        enabled: true
+      runners:
+        - self-hosted
+        - generic
+      conditions:
+        - except-pull-request
+        - not-on-tag
+      steps:
+        - name: login-to-registry
+          registryLoginStep:
+            registry: ghcr.io
+        - name: push
+          command: all
+          environment:
+            PLATFORM: linux/amd64,linux/arm64
+            PUSH: true
+    - name: tag
+      buildxOptions:
+        enabled: true
+      runners:
+        - self-hosted
+        - generic
+      conditions:
+        - only-on-tag
+      steps:
+        - name: release
+        - name: check-dirty
+        - name: login-to-registry
+          registryLoginStep:
+            registry: ghcr.io
+        - name: push
+          command: all
+          environment:
+            PUSH: true
+        - name: release
+          releaseStep:
+            baseDirectory: _out
+            artifacts:
+              - bootstrap-talos/*/*
+            generateChecksums: true
+            releaseNotes: RELEASE_NOTES.md

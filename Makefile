@@ -14,6 +14,8 @@ PKGS ?= v1.9.0
 TALOS_VERSION ?= v1.9.0
 K8S_VERSION ?= 1.31.4
 
+KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
+
 CONTROLLER_GEN_VERSION ?= v0.16.2
 CONVERSION_GEN_VERSION ?= v0.31.3
 
@@ -134,10 +136,7 @@ conformance:  ## Performs policy checks against the commit and source code.
 # Make `make test` behave just like `go test` regarding relative paths.
 test:  ## Run tests.
 	@$(MAKE) local-integration-test DEST=./internal/integration PLATFORM=linux/amd64
-	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../coverage.txt -test.run $(TEST_RUN)
-
-coverage:  ## Upload coverage data to codecov.io.
-	/usr/local/bin/codecov -f coverage.txt -X fix
+	cd internal/integration && KUBECONFIG=../../kubeconfig ./integration.test -test.v -test.coverprofile=../../_out/coverage.txt -test.run $(TEST_RUN)
 
 talosctl:
 	curl -Lo talosctl https://github.com/siderolabs/talos/releases/download/$(TALOS_VERSION)/talosctl-$(shell uname -s | tr "[:upper:]" "[:lower:]")-amd64
@@ -160,3 +159,8 @@ env-down: talosctl ## Stop development environment.
 		--talosconfig=talosconfig \
 		--name=cabpt-env
 	rm -f talosconfig kubeconfig
+
+.PHONY: rekres
+rekres:
+	@docker pull $(KRES_IMAGE)
+	@docker run --rm --net=host --user $(shell id -u):$(shell id -g) -v $(PWD):/src -w /src -e GITHUB_TOKEN $(KRES_IMAGE)
