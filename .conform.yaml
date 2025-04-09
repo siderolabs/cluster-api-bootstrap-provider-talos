@@ -1,3 +1,7 @@
+# THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
+#
+# Generated on 2025-04-09T14:21:53Z by kres d903dae.
+
 policies:
   - type: commit
     spec:
@@ -25,15 +29,22 @@ policies:
           - style
           - test
           - release
-        scopes: [".*"]
+        scopes:
+          - .*
   - type: license
     spec:
       skipPaths:
         - .git/
+        - testdata/
       includeSuffixes:
         - .go
-      excludeSuffixes: []
-      allowPrecedingComments: true
+      excludeSuffixes:
+        - .pb.go
+        - _string.go
+        - _enumer.go
+        - _string_linux.go
+        - zz_generated.conversion.go
+        - zz_generated.deepcopy.go
       header: |
         // This Source Code Form is subject to the terms of the Mozilla Public
         // License, v. 2.0. If a copy of the MPL was not distributed with this
