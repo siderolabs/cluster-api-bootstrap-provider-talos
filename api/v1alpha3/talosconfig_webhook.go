@@ -5,6 +5,7 @@
 package v1alpha3
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/go-cmp/cmp"
@@ -20,21 +21,25 @@ import (
 func (r *TalosConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithValidator(r).
 		Complete()
 }
 
 //+kubebuilder:webhook:verbs=create;update,path=/validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfig,mutating=false,failurePolicy=fail,groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,versions=v1alpha3,name=vtalosconfig.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1
 
-var _ webhook.Validator = &TalosConfig{}
+var _ webhook.CustomValidator = &TalosConfig{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateCreate() (admission.Warnings, error) {
+func (r *TalosConfig) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	r = obj.(*TalosConfig)
+
 	return nil, r.validate()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
-	old := oldRaw.(*TalosConfig)
+func (r *TalosConfig) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	old := oldObj.(*TalosConfig)
+	r = newObj.(*TalosConfig)
 
 	if !cmp.Equal(r.Spec, old.Spec) {
 		return nil, apierrors.NewBadRequest("TalosConfig.Spec is immutable")
@@ -44,7 +49,7 @@ func (r *TalosConfig) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings,
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateDelete() (admission.Warnings, error) {
+func (r *TalosConfig) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

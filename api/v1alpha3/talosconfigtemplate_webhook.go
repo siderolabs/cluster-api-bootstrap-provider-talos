@@ -5,6 +5,8 @@
 package v1alpha3
 
 import (
+	"context"
+
 	"github.com/google/go-cmp/cmp"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -16,21 +18,23 @@ import (
 func (r *TalosConfigTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithValidator(r).
 		Complete()
 }
 
 //+kubebuilder:webhook:verbs=update,path=/validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfigtemplate,mutating=false,failurePolicy=fail,groups=bootstrap.cluster.x-k8s.io,resources=talosconfigtemplates,versions=v1alpha3,name=vtalosconfigtemplate.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1
 
-var _ webhook.Validator = &TalosConfigTemplate{}
+var _ webhook.CustomValidator = &TalosConfigTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateCreate() (admission.Warnings, error) {
+func (r *TalosConfigTemplate) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
-	old := oldRaw.(*TalosConfigTemplate)
+func (r *TalosConfigTemplate) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	old := oldObj.(*TalosConfigTemplate)
+	r = newObj.(*TalosConfigTemplate)
 
 	if !cmp.Equal(r.Spec, old.Spec) {
 		return nil, apierrors.NewBadRequest("TalosConfigTemplate.Spec is immutable")
@@ -40,6 +44,6 @@ func (r *TalosConfigTemplate) ValidateUpdate(oldRaw runtime.Object) (admission.W
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfigTemplate) ValidateDelete() (admission.Warnings, error) {
+func (r *TalosConfigTemplate) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
