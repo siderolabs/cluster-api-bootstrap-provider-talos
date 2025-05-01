@@ -1,3 +1,89 @@
+## [CAPI Bootstrap Provider Talos 0.6.8](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.8) (2025-05-01)
+
+Welcome to the v0.6.8 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Cluster API
+
+CABPT is now built and tested with Cluster API 1.10.0.
+
+
+### Talos Linux
+
+CABPT now supports Talos Linux v1.10.x machine configuration generation.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Chris
+* Christian Bendieck
+* Dmitriy Matrenichev
+* Noel Georgi
+
+### Changes
+<details><summary>5 commits</summary>
+<p>
+
+* [`16c6183`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/16c6183db712a8f2a4e631f0511101379a385c12) feat: update Talos to 1.10.0, CAPI to 1.10.0
+* [`636868b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/636868bcaf14f8d9a12761c4bcd95a255b124ef0) feat: update Talos to 1.10-beta.0, CAPI to 1.10-rc.1
+* [`7fcb5b3`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/7fcb5b3859ca024d7276b32664d23d65493b4a91) feat: use kres to manage github actions
+* [`0044f9b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/0044f9b027a0d2ed437f18fcc80d6b6c398e1583) fix: use net.JoinHostPort for control plane endpoint URL
+* [`e135465`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e1354658114dfc6f202369b3214dc0929146c84c) feat: add infrastructurename hostname source
+</p>
+</details>
+
+### Changes since v0.6.8-alpha.2
+<details><summary>5 commits</summary>
+<p>
+
+* [`16c6183`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/16c6183db712a8f2a4e631f0511101379a385c12) feat: update Talos to 1.10.0, CAPI to 1.10.0
+* [`636868b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/636868bcaf14f8d9a12761c4bcd95a255b124ef0) feat: update Talos to 1.10-beta.0, CAPI to 1.10-rc.1
+* [`7fcb5b3`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/7fcb5b3859ca024d7276b32664d23d65493b4a91) feat: use kres to manage github actions
+* [`0044f9b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/0044f9b027a0d2ed437f18fcc80d6b6c398e1583) fix: use net.JoinHostPort for control plane endpoint URL
+* [`e135465`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e1354658114dfc6f202369b3214dc0929146c84c) feat: add infrastructurename hostname source
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>1 commit</summary>
+<p>
+
+* [`0d45dee`](https://github.com/siderolabs/crypto/commit/0d45deefbcdd4bd6b6e549433b859083df55fc16) chore: bump deps
+</p>
+</details>
+
+### Changes from siderolabs/go-pointer
+<details><summary>1 commit</summary>
+<p>
+
+* [`347ee9b`](https://github.com/siderolabs/go-pointer/commit/347ee9b78f625d420254f4ab01bb1d6174474bf4) chore: rekres, update dependencies
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/evanphx/json-patch**              v5.9.0 -> v5.9.11
+* **github.com/google/go-cmp**                   v0.6.0 -> v0.7.0
+* **github.com/siderolabs/crypto**               v0.5.0 -> v0.5.1
+* **github.com/siderolabs/go-pointer**           v1.0.0 -> v1.0.1
+* **github.com/siderolabs/talos/pkg/machinery**  v1.9.0 -> v1.10.0
+* **github.com/spf13/pflag**                     v1.0.5 -> v1.0.6
+* **golang.org/x/sys**                           v0.28.0 -> v0.32.0
+* **k8s.io/api**                                 v0.31.3 -> v0.32.3
+* **k8s.io/apiextensions-apiserver**             v0.31.3 -> v0.32.3
+* **k8s.io/apimachinery**                        v0.31.3 -> v0.32.3
+* **k8s.io/client-go**                           v0.31.3 -> v0.32.3
+* **k8s.io/component-base**                      v0.31.3 -> v0.32.3
+* **sigs.k8s.io/cluster-api**                    v1.9.0 -> v1.10.1
+* **sigs.k8s.io/controller-runtime**             v0.19.3 -> v0.20.4
+
+Previous release can be found at [v0.6.7](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.7)
+
 ## [CAPI Bootstrap Provider Talos 0.6.7](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.7) (2024-12-17)
 
 Welcome to the v0.6.7 release of CAPI Bootstrap Provider Talos!
