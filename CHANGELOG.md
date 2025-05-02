@@ -1,3 +1,30 @@
+## [CAPI Bootstrap Provider Talos 0.6.9](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.9) (2025-05-02)
+
+Welcome to the v0.6.9 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Contributors
+
+* Noel Georgi
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`b7a2f69`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/b7a2f69f323d319907c0fb0cdb63fa3de62c040a) fix(ci): arm64 container image asset
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.6.8](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.8)
+
 ## [CAPI Bootstrap Provider Talos 0.6.8](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.8) (2025-05-01)
 
 Welcome to the v0.6.8 release of CAPI Bootstrap Provider Talos!
