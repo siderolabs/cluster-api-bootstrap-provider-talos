@@ -88,6 +88,7 @@ spec:
         - name: push
           command: all
           environment:
+            PLATFORM: linux/amd64,linux/arm64
             PUSH: true
         - name: release
           releaseStep:
