@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/siderolabs/crypto v0.6.3
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos/pkg/machinery v1.11.0-beta.1
+	github.com/siderolabs/talos/pkg/machinery v1.11.0
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sys v0.35.0

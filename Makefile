@@ -11,8 +11,8 @@ TEST_RUN ?= ./...
 
 TOOLS ?= ghcr.io/siderolabs/tools:v1.11.0
 PKGS ?= v1.11.0
-TALOS_VERSION ?= v1.11.0-beta.1
-K8S_VERSION ?= 1.33.3
+TALOS_VERSION ?= v1.11.0
+K8S_VERSION ?= 1.34.0
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 
