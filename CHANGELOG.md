@@ -1,3 +1,53 @@
+## [CAPI Bootstrap Provider Talos 0.6.10](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.10) (2025-09-01)
+
+Welcome to the v0.6.10 release of CAPI Bootstrap Provider Talos!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### Talos Linux
+
+CABPT now supports Talos Linux v1.11.x machine configuration generation.
+
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`2749949`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/274994901dfd77b01ee116fa39c3d9303c41176d) feat: update Talos to v1.11.0
+* [`710fae2`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/710fae2a8bc0b62410c97ab55234bba365d1866d) feat: update Talos to 1.11.0-beta.1
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>5 commits</summary>
+<p>
+
+* [`62a079b`](https://github.com/siderolabs/crypto/commit/62a079b6915dc6dff602dca835fafbeabb6adbce) fix: update TLS config, add tests for TLS interactions
+* [`c2b4e26`](https://github.com/siderolabs/crypto/commit/c2b4e26d7d7e45e8269a040fb0251446354ba8ef) fix: remove code duplication and fix Ed255119 CA generation
+* [`2a07632`](https://github.com/siderolabs/crypto/commit/2a076326bbdd3da61460197a3fa1a0484a347478) fix: enforce FIPS-140-3 compliance
+* [`17107ae`](https://github.com/siderolabs/crypto/commit/17107ae45403a2bcd4fecfb4660b60276652b00d) fix: add generic CSR generator and OpenSSL interop
+* [`53659fc`](https://github.com/siderolabs/crypto/commit/53659fc35f6abd4ada7ffa22ef1b148cf93c0f28) refactor: split into files
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/go-logr/logr**                    v1.4.2 -> v1.4.3
+* **github.com/siderolabs/crypto**               v0.5.1 -> v0.6.3
+* **github.com/siderolabs/talos/pkg/machinery**  v1.10.0 -> v1.11.0
+* **github.com/spf13/pflag**                     v1.0.6 -> v1.0.7
+* **golang.org/x/sys**                           v0.32.0 -> v0.35.0
+* **sigs.k8s.io/cluster-api**                    v1.10.1 -> v1.10.4
+
+Previous release can be found at [v0.6.9](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.9)
+
 ## [CAPI Bootstrap Provider Talos 0.6.9](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.9) (2025-05-02)
 
 Welcome to the v0.6.9 release of CAPI Bootstrap Provider Talos!
