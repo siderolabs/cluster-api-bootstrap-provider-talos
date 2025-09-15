@@ -18,8 +18,7 @@ import (
 	"k8s.io/component-base/logs"
 	logsv1 "k8s.io/component-base/logs/api/v1"
 	"k8s.io/klog/v2"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util/flags"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -94,7 +93,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	req, _ := labels.NewRequirement(clusterv1.ClusterNameLabel, selection.Exists, nil)
+	req, _ := labels.NewRequirement(capiv1.ClusterNameLabel, selection.Exists, nil)
 	clusterSecretCacheSelector := labels.NewSelector().Add(*req)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

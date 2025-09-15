@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 )
@@ -149,14 +149,14 @@ func TestIntegration(t *testing.T) {
 
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, &capiv1.ClusterSpec{
-			ClusterNetwork: &capiv1.ClusterNetwork{
-				Services: &capiv1.NetworkRanges{
+			ClusterNetwork: capiv1.ClusterNetwork{
+				Services: capiv1.NetworkRanges{
 					CIDRBlocks: []string{
 						"192.168.0.0/16",
 						"fdaa:bbbb:cccc:15::/64",
 					},
 				},
-				Pods: &capiv1.NetworkRanges{
+				Pods: capiv1.NetworkRanges{
 					CIDRBlocks: []string{
 						"10.0.0.0/16",
 						"fdbb:bbbb:cccc:15::/64",

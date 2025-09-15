@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,7 +67,7 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 
 	if spec == nil {
 		spec = &capiv1.ClusterSpec{
-			ClusterNetwork: &capiv1.ClusterNetwork{},
+			ClusterNetwork: capiv1.ClusterNetwork{},
 			ControlPlaneEndpoint: capiv1.APIEndpoint{
 				Host: clusterName + ".host",
 				Port: 12345,
@@ -110,7 +110,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
 			Bootstrap: capiv1.Bootstrap{
-				ConfigRef: &corev1.ObjectReference{
+				ConfigRef: corev1.ObjectReference{
 					Kind:       "TalosConfig",
 					APIVersion: bootstrapv1alpha3.GroupVersion.String(),
 					Name:       talosconfig.GetName(),
@@ -119,7 +119,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 				},
 			},
 			InfrastructureRef: corev1.ObjectReference{
-				Name: generateName(t, "infrastructure"),
+				Name:      generateName(t, "infrastructure"),
 				Namespace: cluster.Namespace,
 			},
 		},
