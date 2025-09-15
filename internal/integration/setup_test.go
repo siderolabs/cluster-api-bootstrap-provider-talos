@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	clusterctlclient "sigs.k8s.io/cluster-api/cmd/clusterctl/client"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -215,7 +215,7 @@ func installCAPI(ctx context.Context, t *testing.T) {
 
 		initOpts := clusterctlclient.InitOptions{
 			BootstrapProviders:      []string{clusterctlclient.NoopProvider},
-			InfrastructureProviders: []string{clusterctlclient.NoopProvider},
+			InfrastructureProviders: []string{"docker"},
 			ControlPlaneProviders:   []string{clusterctlclient.NoopProvider},
 		}
 

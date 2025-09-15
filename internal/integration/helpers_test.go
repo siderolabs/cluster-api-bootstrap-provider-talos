@@ -22,7 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	capdv1 "sigs.k8s.io/cluster-api/test/infrastructure/docker/api/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,12 +73,18 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 
 	if spec == nil {
 		spec = &capiv1.ClusterSpec{
-			ClusterNetwork: &capiv1.ClusterNetwork{},
+			ClusterNetwork: capiv1.ClusterNetwork{},
 			ControlPlaneEndpoint: capiv1.APIEndpoint{
 				Host: clusterName + ".host",
 				Port: 12345,
 			},
 		}
+	}
+
+	spec.InfrastructureRef = capiv1.ContractVersionedObjectReference{
+		APIGroup: "infrastructure.cluster.x-k8s.io",
+		Kind:     "DevCluster",
+		Name:     clusterName,
 	}
 
 	cluster := &capiv1.Cluster{
@@ -87,6 +94,23 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 		},
 		Spec: *spec,
 	}
+
+	devCluster := &capdv1.DevCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespaceName,
+			Name:      spec.InfrastructureRef.Name,
+			Annotations: map[string]string{
+				"dummy": "dummy", // required due to in-memory nil map panic
+			},
+		},
+		Spec: capdv1.DevClusterSpec{
+			Backend: capdv1.DevClusterBackendSpec{
+				InMemory: &capdv1.InMemoryClusterBackendSpec{},
+			},
+		},
+	}
+
+	require.NoError(t, c.Create(ctx, devCluster), "can't create dev infrastructure cluster")
 
 	require.NoError(t, c.Create(ctx, cluster), "can't create a cluster")
 
@@ -115,17 +139,16 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
 			Bootstrap: capiv1.Bootstrap{
-				ConfigRef: &corev1.ObjectReference{
-					Kind:       "TalosConfig",
-					APIVersion: bootstrapv1alpha3.GroupVersion.String(),
-					Name:       talosconfig.GetName(),
-					Namespace:  talosconfig.GetNamespace(),
-					UID:        talosconfig.GetUID(),
+				ConfigRef: capiv1.ContractVersionedObjectReference{
+					Kind:     "TalosConfig",
+					APIGroup: bootstrapv1alpha3.GroupVersion.Group,
+					Name:     talosconfig.GetName(),
 				},
 			},
-			InfrastructureRef: corev1.ObjectReference{
-				Name:      generateName(t, "infrastructure"),
-				Namespace: cluster.Namespace,
+			InfrastructureRef: capiv1.ContractVersionedObjectReference{
+				APIGroup: "infrastructure.cluster.x-k8s.io",
+				Kind:     "DevMachine",
+				Name:     generateName(t, "infrastructure"),
 			},
 		},
 	}

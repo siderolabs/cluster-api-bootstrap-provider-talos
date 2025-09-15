@@ -6,17 +6,17 @@ github_repo = "siderolabs/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.6.10"
+previous = "v0.6.11"
 
 pre_release = false
 
-[notes.patches]
-    title = "Talos Linux"
-        description = """\
-CABPT now supports Talos Linux v1.12.x machine configuration generation.
+[notes]
+
+[notes.CAPI]
+    title = "CAPI"
+    description = """\
+CABPT is now compatible with CAPI v1.12.0+ (v1beta2).
 """
 
 preface = """\
 """
-
-[notes]
