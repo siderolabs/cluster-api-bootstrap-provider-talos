@@ -110,17 +110,14 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 		Spec: capiv1.MachineSpec{
 			ClusterName: cluster.Name,
 			Bootstrap: capiv1.Bootstrap{
-				ConfigRef: corev1.ObjectReference{
-					Kind:       "TalosConfig",
-					APIVersion: bootstrapv1alpha3.GroupVersion.String(),
-					Name:       talosconfig.GetName(),
-					Namespace:  talosconfig.GetNamespace(),
-					UID:        talosconfig.GetUID(),
+				ConfigRef: capiv1.ContractVersionedObjectReference{
+					Kind:     "TalosConfig",
+					APIGroup: bootstrapv1alpha3.GroupVersion.Group,
+					Name:     talosconfig.GetName(),
 				},
 			},
-			InfrastructureRef: corev1.ObjectReference{
-				Name:      generateName(t, "infrastructure"),
-				Namespace: cluster.Namespace,
+			InfrastructureRef: capiv1.ContractVersionedObjectReference{
+				Name: generateName(t, "infrastructure"),
 			},
 		},
 	}

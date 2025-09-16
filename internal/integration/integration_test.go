@@ -427,7 +427,6 @@ func TestIntegration(t *testing.T) {
 
 		require.NoError(t, ctx.Err())
 
-		assert.Equal(t, capiv1.ConditionSeverityError, *conditions.GetSeverity(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
 		assert.Equal(t,
 			"failure applying rfc6902 patches to talos machine config: add operation does not apply: doc is missing path: \"/machine/time/servers\": missing value",
 			conditions.GetMessage(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
