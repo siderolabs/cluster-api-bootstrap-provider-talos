@@ -2,9 +2,6 @@ module github.com/siderolabs/cluster-api-bootstrap-provider-talos
 
 go 1.24.0
 
-// compatibility with kube-apiserver v0.32.3, should be dropped once kube-apiserver dependency is updated
-replace github.com/google/cel-go => github.com/google/cel-go v0.22.0
-
 require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/go-logr/logr v1.4.3
