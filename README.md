@@ -47,10 +47,11 @@ providers:
 
 This provider's versions are compatible with the following versions of Cluster API:
 
-|                | v1alpha3 (v0.3) | v1alpha4 (v0.4) | v1beta1 (v1.x) |
-| -------------- | --------------- | --------------- | -------------- |
-| CABPT (v0.5.x) |                 |                 | ✓              |
-| CABPT (v0.6.x) |                 |                 | ✓              |
+|                | v1alpha3 (v0.3) | v1alpha4 (v0.4) | v1beta1 (v1.x) | v1beta2 (v1.1.x) |
+| -------------- | --------------- | --------------- | -------------- | -------------- |
+| CABPT (v0.5.x) |                 |                 | ✓              |                |
+| CABPT (v0.6.x) |                 |                 | ✓              |                |
+| CABPT (v0.7.x) |                 |                 |                | ✓              |
 
 This provider's versions are able to install and manage the following versions of Kubernetes:
 
@@ -58,6 +59,7 @@ This provider's versions are able to install and manage the following versions o
 | -------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | CABPT (v0.5.x) | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |
 | CABPT (v0.6.x) |       |       |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
+| CABPT (v0.7.x) |       |       |       |       |       |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 This provider's versions are compatible with the following versions of Talos:
 
@@ -65,6 +67,7 @@ This provider's versions are compatible with the following versions of Talos:
 | ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |
 | CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
+| CABPT (v0.7.x)   |       |       |       |       |       |       |       |       |       | ✓     | ✓     | ✓     |
 
 CABPT generates machine configuration compatible with Talos Linux version specified in the `talosVersion:` field (see below).
 

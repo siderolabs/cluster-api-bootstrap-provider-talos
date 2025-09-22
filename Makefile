@@ -16,8 +16,8 @@ K8S_VERSION ?= 1.34.0
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 
-CONTROLLER_GEN_VERSION ?= v0.17.0
-CONVERSION_GEN_VERSION ?= v0.32.3
+CONTROLLER_GEN_VERSION ?= v0.18.0
+CONVERSION_GEN_VERSION ?= v0.33.3
 
 BUILD := docker buildx build
 PLATFORM ?= linux/amd64
