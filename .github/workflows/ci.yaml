@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-09-01T14:49:33Z by kres 784fa1f.
+# Generated on 2025-11-17T11:45:00Z by kres e1d6dac.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -26,13 +26,12 @@ jobs:
       packages: write
       pull-requests: read
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: (!startsWith(github.head_ref, 'renovate/') && !startsWith(github.head_ref, 'dependabot/')) && github.event_name == 'pull_request'
     steps:
       - name: gather-system-info
         id: system-info
-        uses: kenchan0130/actions-system-info@v1.3.1
+        uses: kenchan0130/actions-system-info@v1.4.0
         continue-on-error: true
       - name: print-system-info
         run: |
@@ -104,13 +103,12 @@ jobs:
       packages: write
       pull-requests: read
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: (!startsWith(github.head_ref, 'renovate/') && !startsWith(github.head_ref, 'dependabot/')) && github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
     steps:
       - name: gather-system-info
         id: system-info
-        uses: kenchan0130/actions-system-info@v1.3.1
+        uses: kenchan0130/actions-system-info@v1.4.0
         continue-on-error: true
       - name: print-system-info
         run: |
@@ -166,13 +164,12 @@ jobs:
       packages: write
       pull-requests: read
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: (!startsWith(github.head_ref, 'renovate/') && !startsWith(github.head_ref, 'dependabot/')) && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: gather-system-info
         id: system-info
-        uses: kenchan0130/actions-system-info@v1.3.1
+        uses: kenchan0130/actions-system-info@v1.4.0
         continue-on-error: true
       - name: print-system-info
         run: |
@@ -231,7 +228,7 @@ jobs:
           sha256sum bootstrap-talos/*/* > sha256sum.txt
           sha512sum bootstrap-talos/*/* > sha512sum.txt
       - name: release
-        uses: crazy-max/ghaction-github-release@v2
+        uses: softprops/action-gh-release@v2
         with:
           body_path: _out/RELEASE_NOTES.md
           draft: "true"
