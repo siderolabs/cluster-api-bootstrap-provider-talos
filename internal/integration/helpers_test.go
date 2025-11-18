@@ -56,7 +56,12 @@ func generateName(t *testing.T, kind string) string {
 		time.Duration(now.Nanosecond())
 	n := clock / time.Microsecond
 
-	return fmt.Sprintf("%s-%s-%d", strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-"), kind, n)
+	name := fmt.Sprintf("%s-%s-%d", strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-"), kind, n)
+	if len(name) > 63 {
+		name = name[:63]
+	}
+
+	return name
 }
 
 // createCluster creates a Cluster with "ready" infrastructure.
@@ -119,7 +124,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 				},
 			},
 			InfrastructureRef: corev1.ObjectReference{
-				Name: generateName(t, "infrastructure"),
+				Name:      generateName(t, "infrastructure"),
 				Namespace: cluster.Namespace,
 			},
 		},
@@ -181,6 +186,9 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		Namespace: talosConfig.Namespace,
 		Name:      talosConfig.Name,
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Minute*15)
+	defer cancel()
 
 	for ctx.Err() == nil {
 		err := c.Get(ctx, key, talosConfig)

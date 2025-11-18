@@ -5,17 +5,21 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
+	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
@@ -23,8 +27,10 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
+	"github.com/siderolabs/talos/pkg/machinery/config/types/network"
 	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -277,6 +283,8 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 
 	machineType, _ := machine.ParseType(config.Spec.GenerateType) //nolint:errcheck // handle errors later
 
+	multiConfigPatches := []string{}
+
 	switch {
 	// Slurp and use user-supplied configs
 	case config.Spec.GenerateType == "none":
@@ -291,7 +299,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 
 	// Generate configs on the fly
 	case machineType != machine.TypeUnknown:
-		retData, err = r.genConfigs(ctx, tcScope)
+		retData, multiConfigPatches, err = r.genConfigs(ctx, tcScope)
 		if err != nil {
 			return err
 		}
@@ -322,10 +330,10 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 	}
 
 	// Handle strategic merge patches.
-	if len(config.Spec.StrategicPatches) > 0 {
-		patches := make([]configpatcher.Patch, 0, len(config.Spec.StrategicPatches))
+	if strategicPatches := slices.AppendSeq(config.Spec.StrategicPatches, slices.Values(multiConfigPatches)); len(strategicPatches) > 0 {
+		patches := make([]configpatcher.Patch, 0, len(strategicPatches))
 
-		for _, strategicPatch := range config.Spec.StrategicPatches {
+		for _, strategicPatch := range strategicPatches {
 			patch, err := configpatcher.LoadPatch([]byte(strategicPatch))
 			if err != nil {
 				return fmt.Errorf("failure loading StrategicPatch: %w", err)
@@ -447,7 +455,7 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 }
 
 // genConfigs will generate a bootstrap config and a talosconfig to return
-func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConfigScope) (*TalosConfigBundle, error) {
+func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConfigScope) (*TalosConfigBundle, []string, error) {
 	retBundle := &TalosConfigBundle{}
 
 	// Determine what type of node this is
@@ -456,6 +464,8 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		machineType = machine.TypeWorker
 	}
 
+	patches := []string{}
+
 	// Allow user to override default kube version.
 	// This also handles version being formatted like "vX.Y.Z" instead of without leading 'v'
 	// TrimPrefix returns the string unchanged if the prefix isn't present.
@@ -463,7 +473,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	if scope.ConfigOwner.IsMachinePool() {
 		mp := &expv1.MachinePool{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, mp); err != nil {
-			return retBundle, err
+			return retBundle, patches, err
 		}
 		if mp.Spec.Template.Spec.Version != nil {
 			k8sVersion = strings.TrimPrefix(*mp.Spec.Template.Spec.Version, "v")
@@ -471,7 +481,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	} else {
 		machine := &capiv1.Machine{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, machine); err != nil {
-			return retBundle, err
+			return retBundle, patches, err
 		}
 		if machine.Spec.Version != nil {
 			k8sVersion = strings.TrimPrefix(*machine.Spec.Version, "v")
@@ -491,7 +501,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		var err error
 		versionContract, err = config.ParseContractFromVersion(scope.Config.Spec.TalosVersion)
 		if err != nil {
-			return retBundle, fmt.Errorf("invalid talos-version: %w", err)
+			return retBundle, patches, fmt.Errorf("invalid talos-version: %w", err)
 		}
 	}
 
@@ -499,7 +509,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 	secretBundle, err := r.getSecretsBundle(ctx, scope, true, versionContract)
 	if err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	genOptions = append(genOptions, generate.WithSecretsBundle(secretBundle))
@@ -518,24 +528,24 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		genOptions...,
 	)
 	if err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
 	if err = r.writeK8sCASecret(ctx, scope, secretBundle.Certs.K8s); err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	tcString, err := genTalosConfigFile(input.ClusterName, secretBundle, nil)
 	if err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	retBundle.TalosConfig = tcString
 
 	data, err := input.Config(machineType)
 	if err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	if scope.Cluster.Spec.ClusterNetwork != nil && scope.Cluster.Spec.ClusterNetwork.Pods != nil {
@@ -550,27 +560,48 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 			data.RawV1Alpha1().MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
 		}
 
+		talosVersion, parseErr := semver.NewVersion(strings.TrimLeft(scope.Config.Spec.TalosVersion, "v"))
+
 		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
-			data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+			if parseErr == nil && talosVersion.GreaterThanEqual(semver.MustParse("1.12.0-beta.0")) {
+				hostnameCfg, err := newHostnameConfig(scope.ConfigOwner.GetName())
+				if err != nil {
+					return retBundle, patches, err
+				}
+
+				patches = append(patches, hostnameCfg)
+			} else {
+				data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+			}
 		}
 
 		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceInfrastructureName {
 			machine := &capiv1.Machine{}
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, machine); err != nil {
-				return retBundle, err
+				return retBundle, patches, err
 			}
-			data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = machine.Spec.InfrastructureRef.Name
+
+			if parseErr == nil && talosVersion.GreaterThanEqual(semver.MustParse("1.12.0-beta.0")) {
+				hostnameCfg, err := newHostnameConfig(machine.Spec.InfrastructureRef.Name)
+				if err != nil {
+					return retBundle, patches, err
+				}
+
+				patches = append(patches, hostnameCfg)
+			} else {
+				data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = machine.Spec.InfrastructureRef.Name
+			}
 		}
 	}
 
 	dataOut, err := data.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 	if err != nil {
-		return retBundle, err
+		return retBundle, patches, err
 	}
 
 	retBundle.BootstrapData = dataOut
 
-	return retBundle, nil
+	return retBundle, patches, nil
 }
 
 // MachineToBootstrapMapFunc is a handler.ToRequestsFunc to be used to enqueue
@@ -652,4 +683,16 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(ctx context.Context, o cli
 	}
 
 	return result
+}
+
+func newHostnameConfig(hostname string) (string, error) {
+	hostnameConfig := network.NewHostnameConfigV1Alpha1()
+	hostnameConfig.ConfigAuto = pointer.To(nethelpers.AutoHostnameKindOff)
+	hostnameConfig.ConfigHostname = hostname
+
+	buf := new(bytes.Buffer)
+
+	err := yaml.NewEncoder(buf).Encode(hostnameConfig)
+
+	return buf.String(), err
 }

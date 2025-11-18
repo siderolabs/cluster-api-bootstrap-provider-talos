@@ -136,15 +136,15 @@ func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.
 		providers[i] = assertMachineConfiguration(ctx, t, c, talosConfigs[i])
 	}
 
-	checks := []func(p machineconfig.Provider) interface{}{
-		func(p machineconfig.Provider) interface{} { return p.Machine().Security().Token() },
-		func(p machineconfig.Provider) interface{} { return p.Machine().Security().IssuingCA().Crt },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().ID() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().Secret() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().Endpoint().String() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().ID() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().Token().Secret() },
-		func(p machineconfig.Provider) interface{} { return p.Cluster().IssuingCA().Crt },
+	checks := []func(p machineconfig.Provider) any{
+		func(p machineconfig.Provider) any { return p.Machine().Security().Token() },
+		func(p machineconfig.Provider) any { return p.Machine().Security().IssuingCA().Crt },
+		func(p machineconfig.Provider) any { return p.Cluster().ID() },
+		func(p machineconfig.Provider) any { return p.Cluster().Secret() },
+		func(p machineconfig.Provider) any { return p.Cluster().Endpoint().String() },
+		func(p machineconfig.Provider) any { return p.Cluster().Token().ID() },
+		func(p machineconfig.Provider) any { return p.Cluster().Token().Secret() },
+		func(p machineconfig.Provider) any { return p.Cluster().IssuingCA().Crt },
 	}
 
 	for _, check := range checks {

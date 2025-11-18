@@ -61,10 +61,10 @@ This provider's versions are able to install and manage the following versions o
 
 This provider's versions are compatible with the following versions of Talos:
 
-|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  | v1.6  | v1.7  | v1.8  | v1.9  | v1.10 | v1.11 |
-| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |
-| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
+|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  | v1.6  | v1.7  | v1.8  | v1.9  | v1.10 | v1.11 | v1.12 |
+| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |       |
+| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 CABPT generates machine configuration compatible with Talos Linux version specified in the `talosVersion:` field (see below).
 
@@ -151,7 +151,9 @@ There are two [patch formats](https://www.talos.dev/latest/talos-guides/configur
 
 See Talos Linux documentation for more information on patching.
 
-> Note: JSON patches are not compatible with multi-document Talos Linux machine configuration.
+> [!IMPORTANT]
+> JSON patches are not compatible with multi-document Talos Linux machine configuration.
+> JSON patches are not compatible with Talos Linux >= 1.12.
 
 JSON 6902 patch:
 

@@ -9,10 +9,10 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 TEST_RUN ?= ./...
 
-TOOLS ?= ghcr.io/siderolabs/tools:v1.11.0
-PKGS ?= v1.11.0
-TALOS_VERSION ?= v1.11.0
-K8S_VERSION ?= 1.34.0
+TOOLS ?= ghcr.io/siderolabs/tools:v1.12.0
+PKGS ?= v1.12.0
+TALOS_VERSION ?= v1.12.0-beta.0
+K8S_VERSION ?= 1.34.2
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 
@@ -143,12 +143,11 @@ talosctl:
 	chmod +x ./talosctl
 
 env-up: talosctl  ## Start development environment.
-	./talosctl cluster create \
-		--talosconfig=talosconfig \
-		--name=cabpt-env \
+	./talosctl cluster create docker \
+    	--name=cabpt-env \
+		--talosconfig-destination=talosconfig \
 		--kubernetes-version=$(K8S_VERSION) \
-		--mtu=1450 \
-		--skip-kubeconfig
+		--mtu=1450
 	./talosctl kubeconfig kubeconfig \
 		--talosconfig=talosconfig \
 		--nodes=10.5.0.2 \
@@ -156,7 +155,6 @@ env-up: talosctl  ## Start development environment.
 
 env-down: talosctl ## Stop development environment.
 	./talosctl cluster destroy \
-		--talosconfig=talosconfig \
 		--name=cabpt-env
 	rm -f talosconfig kubeconfig
 

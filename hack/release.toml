@@ -13,7 +13,7 @@ pre_release = false
 [notes.patches]
     title = "Talos Linux"
         description = """\
-CABPT now supports Talos Linux v1.11.x machine configuration generation.
+CABPT now supports Talos Linux v1.12.x machine configuration generation.
 """
 
 preface = """\

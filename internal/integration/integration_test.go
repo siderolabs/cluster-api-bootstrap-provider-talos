@@ -5,6 +5,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"net/netip"
 	"strings"
@@ -66,7 +67,7 @@ func TestIntegration(t *testing.T) {
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 		controlplaneMachines := []*capiv1.Machine{}
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			machineType := talosmachine.TypeInit
 
 			if i > 0 {
@@ -85,7 +86,7 @@ func TestIntegration(t *testing.T) {
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 		workerMachines := []*capiv1.Machine{}
 
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
 				GenerateType: talosmachine.TypeWorker.String(),
 				TalosVersion: TalosVersion,
@@ -184,40 +185,6 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "192.168.0.0/16,fdaa:bbbb:cccc:15::/64", strings.Join(provider.Cluster().Network().ServiceCIDRs(), ","))
 	})
 
-	t.Run("ConfigPatches", func(t *testing.T) {
-		t.Parallel()
-
-		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
-			GenerateType: talosmachine.TypeInit.String(),
-			TalosVersion: TalosVersion,
-			ConfigPatches: []bootstrapv1alpha3.ConfigPatches{
-				{
-					Op:   "add",
-					Path: "/machine/time",
-					Value: apiextensions.JSON{
-						Raw: []byte(`{"servers": ["time.cloudflare.com"]}`),
-					},
-				},
-				{
-					Op:   "replace",
-					Path: "/machine/certSANs",
-					Value: apiextensions.JSON{
-						Raw: []byte(`["myserver.com"]`),
-					},
-				},
-			},
-		})
-		createMachine(ctx, t, c, cluster, talosConfig, true)
-		waitForReady(ctx, t, c, talosConfig)
-
-		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
-
-		assert.Equal(t, []string{"time.cloudflare.com"}, provider.Machine().Time().Servers())
-		assert.Equal(t, []string{"myserver.com"}, provider.Machine().Security().CertSANs())
-	})
-
 	t.Run("StrategicMergePatch", func(t *testing.T) {
 		t.Parallel()
 
@@ -228,7 +195,7 @@ func TestIntegration(t *testing.T) {
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 			StrategicPatches: []string{
-				"machine:\n  network:\n    hostname: foo.bar",
+				"apiVersion: v1alpha1\nkind: HostnameConfig\nauto: off\nhostname: foo.bar",
 				"machine:\n  time:\n    servers: [time.cloudflare.com]",
 			},
 		})
@@ -238,8 +205,8 @@ func TestIntegration(t *testing.T) {
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
-		assert.Equal(t, "foo.bar", provider.Machine().Network().Hostname())
-		assert.Equal(t, []string{"time.cloudflare.com"}, provider.Machine().Time().Servers())
+		assert.Equal(t, "foo.bar", provider.NetworkHostnameConfig().Hostname())
+		assert.Equal(t, []string{"time.cloudflare.com"}, provider.NetworkTimeSyncConfig().Servers())
 	})
 
 	t.Run("StrategicMergePatchDelete", func(t *testing.T) {
@@ -317,7 +284,7 @@ func TestIntegration(t *testing.T) {
 
 		workers := []*bootstrapv1alpha3.TalosConfig{}
 
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			machineconfig, err := input.Config(talosmachine.TypeWorker)
 			require.NoError(t, err)
 
@@ -335,7 +302,7 @@ func TestIntegration(t *testing.T) {
 
 		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			machineType := talosmachine.TypeInit
 
 			if i > 0 {
@@ -389,6 +356,9 @@ func TestIntegration(t *testing.T) {
 	t.Run("BadConfigPatch", func(t *testing.T) {
 		t.Parallel()
 
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*15)
+		defer cancel()
+
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
 		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
@@ -429,9 +399,10 @@ func TestIntegration(t *testing.T) {
 
 		assert.Equal(t, capiv1.ConditionSeverityError, *conditions.GetSeverity(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
 		assert.Equal(t,
-			"failure applying rfc6902 patches to talos machine config: add operation does not apply: doc is missing path: \"/machine/time/servers\": missing value",
+			"JSON6902 patches are not supported for multi-document machine configuration",
 			conditions.GetMessage(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
 	})
+
 	t.Run("HostnameFromMachineName", func(t *testing.T) {
 		t.Parallel()
 
@@ -454,7 +425,7 @@ func TestIntegration(t *testing.T) {
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
-		assert.Equal(t, machine.Name, provider.Machine().Network().Hostname())
+		assert.Equal(t, machine.Name, provider.NetworkHostnameConfig().Hostname())
 	})
 	t.Run("HostnameFromInfraName", func(t *testing.T) {
 		t.Parallel()
@@ -478,8 +449,9 @@ func TestIntegration(t *testing.T) {
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
-		assert.Equal(t, machine.Spec.InfrastructureRef.Name, provider.Machine().Network().Hostname())
+		assert.Equal(t, machine.Spec.InfrastructureRef.Name, provider.NetworkHostnameConfig().Hostname())
 	})
+
 	t.Run("TalosConfigValidate", func(t *testing.T) {
 		t.Parallel()
 
