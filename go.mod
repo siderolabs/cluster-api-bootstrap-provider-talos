@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos/pkg/machinery v1.12.0-beta.0
+	github.com/siderolabs/talos/pkg/machinery v1.12.0
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sys v0.38.0
@@ -23,7 +23,7 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/component-base v0.32.3
 	k8s.io/klog/v2 v2.130.1
-	sigs.k8s.io/cluster-api v1.10.4
+	sigs.k8s.io/cluster-api v1.10.9
 	sigs.k8s.io/controller-runtime v0.20.4
 )
 
@@ -62,7 +62,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
