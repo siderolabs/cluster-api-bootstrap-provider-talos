@@ -3,28 +3,28 @@ module github.com/siderolabs/cluster-api-bootstrap-provider-talos
 go 1.25.3
 
 // compatibility with kube-apiserver v0.32.3, should be dropped once kube-apiserver dependency is updated
-replace github.com/google/cel-go => github.com/google/cel-go v0.22.0
+replace github.com/google/cel-go => github.com/google/cel-go v0.26.1
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/talos/pkg/machinery v1.12.0
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sys v0.38.0
-	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.32.3
-	k8s.io/apiextensions-apiserver v0.32.3
-	k8s.io/apimachinery v0.32.3
-	k8s.io/client-go v0.32.3
-	k8s.io/component-base v0.32.3
+	golang.org/x/sys v0.39.0
+	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery v0.35.0
+	k8s.io/client-go v0.35.0
+	k8s.io/component-base v0.35.0
 	k8s.io/klog/v2 v2.130.1
-	sigs.k8s.io/cluster-api v1.10.9
-	sigs.k8s.io/controller-runtime v0.20.4
+	sigs.k8s.io/cluster-api v1.12.1
+	sigs.k8s.io/controller-runtime v0.22.4
 )
 
 require (
