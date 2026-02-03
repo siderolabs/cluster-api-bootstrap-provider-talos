@@ -8,7 +8,7 @@ match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 # previous release
 previous = "v0.6.11"
 
-pre_release = false
+pre_release = true
 
 [notes]
 
