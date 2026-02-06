@@ -10,7 +10,6 @@ import (
 	"time"
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/siderolabs/go-pointer"
 	talosclientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
 	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
@@ -53,7 +52,7 @@ func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Clie
 
 	key := types.NamespacedName{
 		Namespace: talosConfig.Namespace,
-		Name:      pointer.SafeDeref(talosConfig.Status.DataSecretName),
+		Name:      talosConfig.Status.DataSecretName,
 	}
 	require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret))
 

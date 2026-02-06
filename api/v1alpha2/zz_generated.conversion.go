@@ -196,7 +196,7 @@ func autoConvert_v1alpha3_TalosConfigSpec_To_v1alpha2_TalosConfigSpec(in *v1alph
 }
 
 func autoConvert_v1alpha2_TalosConfigStatus_To_v1alpha3_TalosConfigStatus(in *TalosConfigStatus, out *v1alpha3.TalosConfigStatus, s conversion.Scope) error {
-	out.Ready = in.Ready
+	// WARNING: in.Ready requires manual conversion: does not exist in peer-type
 	// WARNING: in.BootstrapData requires manual conversion: does not exist in peer-type
 	out.TalosConfig = in.TalosConfig
 	// WARNING: in.ErrorReason requires manual conversion: does not exist in peer-type
@@ -205,8 +205,8 @@ func autoConvert_v1alpha2_TalosConfigStatus_To_v1alpha3_TalosConfigStatus(in *Ta
 }
 
 func autoConvert_v1alpha3_TalosConfigStatus_To_v1alpha2_TalosConfigStatus(in *v1alpha3.TalosConfigStatus, out *TalosConfigStatus, s conversion.Scope) error {
-	out.Ready = in.Ready
 	// WARNING: in.DataSecretName requires manual conversion: does not exist in peer-type
+	// WARNING: in.Initialization requires manual conversion: does not exist in peer-type
 	out.TalosConfig = in.TalosConfig
 	// WARNING: in.FailureReason requires manual conversion: does not exist in peer-type
 	// WARNING: in.FailureMessage requires manual conversion: does not exist in peer-type

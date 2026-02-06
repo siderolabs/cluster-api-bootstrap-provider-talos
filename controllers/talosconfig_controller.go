@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	"sigs.k8s.io/cluster-api/feature"
@@ -224,7 +225,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// bail super early if it's already ready
-	if config.Status.Ready {
+	if ptr.Deref(config.Status.Initialization.DataSecretCreated, false) {
 		log.Info("ignoring an already ready config")
 		conditions.Set(config, v1.Condition{
 			Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
@@ -254,7 +255,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Wait patiently for the infrastructure to be ready
-	if !conditions.IsTrue(cluster, string(capiv1.InfrastructureReadyV1Beta1Condition)) {
+	if !ptr.Deref(cluster.Status.Initialization.InfrastructureProvisioned, false) {
 		log.Info("Infrastructure is not ready, waiting until ready.")
 
 		conditions.Set(config, v1.Condition{
@@ -269,10 +270,10 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Reconcile status for machines that already have a secret reference, but our status isn't up to date.
 	// This case solves the pivoting scenario (or a backup restore) which doesn't preserve the status subresource on objects.
-	if owner.DataSecretName() != nil && (!config.Status.Ready || config.Status.DataSecretName == nil) {
-		config.Status.Ready = true
-		config.Status.DataSecretName = owner.DataSecretName()
+	if owner.DataSecretName() != nil && (!ptr.Deref(config.Status.Initialization.DataSecretCreated, false) || config.Status.DataSecretName == "") {
+		config.Status.DataSecretName = *owner.DataSecretName()
 
+		config.Status.Initialization.DataSecretCreated = pointer.To(true)
 		conditions.Set(config, v1.Condition{
 			Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
 			Reason: bootstrapv1alpha3.DataSecretAvailableReason,
@@ -293,7 +294,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	config.Status.Ready = true
+	config.Status.Initialization.DataSecretCreated = pointer.To(true)
 	conditions.Set(config, v1.Condition{
 		Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
 		Reason: bootstrapv1alpha3.DataSecretAvailableReason,
@@ -417,7 +418,7 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 		return err
 	}
 
-	config.Status.DataSecretName = &dataSecretName
+	config.Status.DataSecretName = dataSecretName
 	config.Status.TalosConfig = retData.TalosConfig //nolint:staticcheck // deprecated, for backwards compatibility only
 
 	return nil

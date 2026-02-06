@@ -206,20 +206,33 @@ spec:
                   the bootstrap data script.
                 type: string
               failureMessage:
-                description: FailureMessage will be set on non-retryable errors
+                description: |-
+                  FailureMessage will be set on non-retryable errors
+
+                  Deprecated: FailureMessage is no longer considered as of v1beta2 contract. Will be removed in a future version
                 type: string
               failureReason:
-                description: FailureReason will be set on non-retryable errors
+                description: |-
+                  FailureReason will be set on non-retryable errors
+
+                  Deprecated: FailureReason is no longer considered as of v1beta2 contract. Will be removed in a future version
                 type: string
+              initialization:
+                description: |-
+                  initialization provides observations of the TalosConfig initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+                properties:
+                  dataSecretCreated:
+                    description: |-
+                      dataSecretCreated is true when the Machine's boostrap secret is created.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
+                    type: boolean
+                type: object
               observedGeneration:
                 description: ObservedGeneration is the latest generation observed
                   by the controller.
                 format: int64
                 type: integer
-              ready:
-                description: Ready indicates the BootstrapData field is ready to be
-                  consumed
-                type: boolean
               talosConfig:
                 description: |-
                   Talos config will be a string containing the config for download.

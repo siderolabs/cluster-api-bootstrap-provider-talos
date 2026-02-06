@@ -47,12 +47,14 @@ type HostnameSpec struct {
 
 // TalosConfigStatus defines the observed state of TalosConfig
 type TalosConfigStatus struct {
-	// Ready indicates the BootstrapData field is ready to be consumed
-	Ready bool `json:"ready,omitempty"`
-
 	// DataSecretName is the name of the secret that stores the bootstrap data script.
 	// +optional
-	DataSecretName *string `json:"dataSecretName,omitempty"`
+	DataSecretName string `json:"dataSecretName,omitempty"`
+
+	// initialization provides observations of the TalosConfig initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+	// +optional
+	Initialization TalosConfigInitializationStatus `json:"initialization,omitempty,omitzero"`
 
 	// Talos config will be a string containing the config for download.
 	//
@@ -62,10 +64,16 @@ type TalosConfigStatus struct {
 	TalosConfig string `json:"talosConfig,omitempty"`
 
 	// FailureReason will be set on non-retryable errors
+	//
+	// Deprecated: FailureReason is no longer considered as of v1beta2 contract. Will be removed in a future version
+	//
 	// +optional
 	FailureReason string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set on non-retryable errors
+	//
+	// Deprecated: FailureMessage is no longer considered as of v1beta2 contract. Will be removed in a future version
+	//
 	// +optional
 	FailureMessage string `json:"failureMessage,omitempty"`
 
@@ -76,6 +84,13 @@ type TalosConfigStatus struct {
 	// Conditions defines current service state of the TalosConfig.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type TalosConfigInitializationStatus struct {
+	// dataSecretCreated is true when the Machine's boostrap secret is created.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
+	// +optional
+	DataSecretCreated *bool `json:"dataSecretCreated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
