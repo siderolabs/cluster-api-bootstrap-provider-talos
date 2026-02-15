@@ -9,8 +9,7 @@ import (
 	"testing"
 	"time"
 
-	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	"github.com/siderolabs/go-pointer"
+	bootstrapv1beta1 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1beta1"
 	talosclientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
 	machineconfig "github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
@@ -24,15 +23,6 @@ import (
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// assertClientConfig checks that Talos client config as part of TalosConfig resource is valid.
-func assertClientConfig(t *testing.T, talosConfig *bootstrapv1alpha3.TalosConfig) {
-	t.Helper()
-
-	clientConfig, err := talosclientconfig.FromString(talosConfig.Status.TalosConfig) //nolint:staticcheck
-	require.NoError(t, err)
-	validateClientConfig(t, clientConfig)
-}
 
 // assertClusterClientConfig checks that Talos client config as a cluster-wide secret is valid.
 func assertClusterClientConfig(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, endpoints ...string) {
@@ -48,12 +38,12 @@ func assertClusterClientConfig(ctx context.Context, t *testing.T, c client.Clien
 }
 
 // assertMachineConfiguration checks that generated bootstrap data is a valid Talos machine configuration.
-func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1alpha3.TalosConfig) machineconfig.Provider {
+func assertMachineConfiguration(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1beta1.TalosConfig) machineconfig.Provider {
 	var bootstrapDataSecret corev1.Secret
 
 	key := types.NamespacedName{
 		Namespace: talosConfig.Namespace,
-		Name:      pointer.SafeDeref(talosConfig.Status.DataSecretName),
+		Name:      talosConfig.Status.DataSecretName,
 	}
 	require.NoError(t, c.Get(ctx, key, &bootstrapDataSecret))
 
@@ -112,7 +102,7 @@ func assertControllerSecret(ctx context.Context, t *testing.T, c client.Client, 
 }
 
 // assertSameMachineConfigSecrets checks that control plane configs share same set of secrets.
-func assertSameMachineConfigSecrets(ctx context.Context, t *testing.T, c client.Client, talosConfigs ...*bootstrapv1alpha3.TalosConfig) {
+func assertSameMachineConfigSecrets(ctx context.Context, t *testing.T, c client.Client, talosConfigs ...*bootstrapv1beta1.TalosConfig) {
 	providers := make([]machineconfig.Provider, len(talosConfigs))
 
 	for i := range providers {
@@ -129,7 +119,7 @@ func assertSameMachineConfigSecrets(ctx context.Context, t *testing.T, c client.
 }
 
 // assertCompatibleMachineConfigs checks that configs share same set of core secrets so that nodes can build a cluster.
-func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.Client, talosConfigs ...*bootstrapv1alpha3.TalosConfig) {
+func assertCompatibleMachineConfigs(ctx context.Context, t *testing.T, c client.Client, talosConfigs ...*bootstrapv1beta1.TalosConfig) {
 	providers := make([]machineconfig.Provider, len(talosConfigs))
 
 	for i := range providers {

@@ -3,14 +3,14 @@ repo: github.com/siderolabs/cluster-api-bootstrap-provider-talos
 resources:
 - group: bootstrap
   kind: TalosConfig
-  version: v1alpha2
+  version: v1alpha3
 - group: bootstrap
   kind: TalosConfigTemplate
-  version: v1alpha2
+  version: v1alpha3
 - group: bootstrap
   kind: TalosConfig
-  version: v1alpha3
+  version: v1beta1
 - group: bootstrap
   kind: TalosConfigTemplate
-  version: v1alpha3
+  version: v1beta1
 version: "2"

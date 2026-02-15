@@ -9,16 +9,16 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 
-	bootstrapv1alpha2 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha2"
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1beta1 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
 // Use shared scheme for all calls.
 func init() {
 	utilruntime.Must(capiv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(bootstrapv1alpha2.AddToScheme(scheme.Scheme))
 	utilruntime.Must(bootstrapv1alpha3.AddToScheme(scheme.Scheme))
+	utilruntime.Must(bootstrapv1beta1.AddToScheme(scheme.Scheme))
 
 	// +kubebuilder:scaffold:scheme
 }

@@ -34,14 +34,15 @@ import (
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/conditions/deprecated/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,8 +52,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	"github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
-	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1beta1 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -73,7 +73,7 @@ type TalosConfigReconciler struct {
 }
 
 type TalosConfigScope struct {
-	Config      *bootstrapv1alpha3.TalosConfig
+	Config      *bootstrapv1beta1.TalosConfig
 	ConfigOwner *bsutil.ConfigOwner
 	Cluster     *capiv1.Cluster
 }
@@ -87,7 +87,7 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 	r.Scheme = mgr.GetScheme()
 
 	b := ctrl.NewControllerManagedBy(mgr).
-		For(&bootstrapv1alpha3.TalosConfig{}).
+		For(&bootstrapv1beta1.TalosConfig{}).
 		WithOptions(options).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(r.Scheme, ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Watches(
@@ -133,7 +133,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		WithName(fmt.Sprintf("talosconfig=%s", req.Name))
 
 	// Lookup the talosconfig config
-	config := &bootstrapv1alpha3.TalosConfig{}
+	config := &bootstrapv1beta1.TalosConfig{}
 	if err := r.Client.Get(ctx, req.NamespacedName, config); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -151,12 +151,22 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Always attempt to Patch the TalosConfig object and status after each reconciliation.
 	defer func() {
 		// always update the readyCondition; the summary is represented using the "1 of x completed" notation.
-		conditions.SetSummaryCondition(config, config, string(bootstrapv1alpha3.DataSecretAvailableCondition))
+		conditions.SetSummaryCondition(config, config, bootstrapv1beta1.DataSecretAvailableCondition)
+		v1beta1conditions.SetSummary(config,
+			v1beta1conditions.WithConditions(
+				bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
+			),
+		)
 
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{
 				Conditions: []string{
-					string(bootstrapv1alpha3.DataSecretAvailableCondition),
+					bootstrapv1beta1.DataSecretAvailableCondition,
+				},
+			},
+			patch.WithOwnedV1Beta1Conditions{
+				Conditions: []capiv1.ConditionType{
+					bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
 				},
 			},
 		}
@@ -224,11 +234,12 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// bail super early if it's already ready
-	if config.Status.Ready {
+	if ptr.Deref(config.Status.Initialization.DataSecretCreated, false) {
 		log.Info("ignoring an already ready config")
-		conditions.Set(config, v1.Condition{
-			Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
-			Reason: bootstrapv1alpha3.DataSecretAvailableReason,
+		v1beta1conditions.MarkTrue(config, bootstrapv1beta1.DataSecretAvailableV1Beta1Condition)
+		conditions.Set(config, metav1.Condition{
+			Type:   bootstrapv1beta1.DataSecretAvailableCondition,
+			Reason: bootstrapv1beta1.DataSecretAvailableReason,
 			Status: metav1.ConditionTrue,
 		})
 
@@ -236,16 +247,25 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		err = r.reconcileClientConfig(ctx, log, tcScope)
 
 		if err == nil {
-			conditions.Set(config, v1.Condition{
-				Type:   bootstrapv1alpha3.ClientConfigAvailableCondition,
-				Reason: bootstrapv1alpha3.ClientConfigAvailableCondition,
+			v1beta1conditions.MarkTrue(config, bootstrapv1beta1.ClientConfigAvailableV1Beta1Condition)
+			conditions.Set(config, metav1.Condition{
+				Type:   bootstrapv1beta1.ClientConfigAvailableCondition,
+				Reason: bootstrapv1beta1.ClientConfigAvailableReason,
 				Status: metav1.ConditionTrue,
 			})
 		} else {
-			conditions.Set(config, v1.Condition{
-				Type:    bootstrapv1alpha3.ClientConfigAvailableCondition,
+			v1beta1conditions.MarkFalse(
+				config,
+				bootstrapv1beta1.ClientConfigAvailableV1Beta1Condition,
+				bootstrapv1beta1.ClientConfigGenerationFailedV1Beta1Reason,
+				capiv1.ConditionSeverityError,
+				"talosconfig generation failure: %s",
+				err.Error(),
+			)
+			conditions.Set(config, metav1.Condition{
+				Type:    bootstrapv1beta1.ClientConfigAvailableCondition,
 				Status:  metav1.ConditionFalse,
-				Reason:  bootstrapv1alpha3.ClientConfigGenerationFailedReason,
+				Reason:  bootstrapv1beta1.ClientConfigAvailableInternalErrorReason,
 				Message: fmt.Sprintf("talosconfig generation failure: %s", err),
 			})
 		}
@@ -254,13 +274,20 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Wait patiently for the infrastructure to be ready
-	if !conditions.IsTrue(cluster, string(capiv1.InfrastructureReadyV1Beta1Condition)) {
+	if !ptr.Deref(cluster.Status.Initialization.InfrastructureProvisioned, false) {
 		log.Info("Infrastructure is not ready, waiting until ready.")
 
-		conditions.Set(config, v1.Condition{
-			Type:    bootstrapv1alpha3.DataSecretAvailableCondition,
+		v1beta1conditions.MarkFalse(
+			config,
+			bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
+			bootstrapv1beta1.WaitingForClusterInfrastructureV1Beta1Reason,
+			capiv1.ConditionSeverityInfo,
+			"",
+		)
+		conditions.Set(config, metav1.Condition{
+			Type:    bootstrapv1beta1.DataSecretAvailableCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  bootstrapv1alpha3.WaitingForClusterInfrastructureReason,
+			Reason:  bootstrapv1beta1.DataSecretNotAvailableReason,
 			Message: "Waiting for the cluster infrastructure to be ready",
 		})
 
@@ -269,13 +296,14 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Reconcile status for machines that already have a secret reference, but our status isn't up to date.
 	// This case solves the pivoting scenario (or a backup restore) which doesn't preserve the status subresource on objects.
-	if owner.DataSecretName() != nil && (!config.Status.Ready || config.Status.DataSecretName == nil) {
-		config.Status.Ready = true
-		config.Status.DataSecretName = owner.DataSecretName()
+	if owner.DataSecretName() != nil && (!ptr.Deref(config.Status.Initialization.DataSecretCreated, false) || config.Status.DataSecretName == "") {
+		config.Status.Initialization.DataSecretCreated = ptr.To(true)
+		config.Status.DataSecretName = *owner.DataSecretName()
 
-		conditions.Set(config, v1.Condition{
-			Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
-			Reason: bootstrapv1alpha3.DataSecretAvailableReason,
+		v1beta1conditions.MarkTrue(config, bootstrapv1beta1.DataSecretAvailableV1Beta1Condition)
+		conditions.Set(config, metav1.Condition{
+			Type:   bootstrapv1beta1.DataSecretAvailableCondition,
+			Reason: bootstrapv1beta1.DataSecretAvailableReason,
 			Status: metav1.ConditionTrue,
 		})
 
@@ -283,20 +311,30 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if err = r.reconcileGenerate(ctx, tcScope); err != nil {
-		conditions.Set(config, v1.Condition{
-			Type:    bootstrapv1alpha3.DataSecretAvailableCondition,
+		v1beta1conditions.MarkFalse(
+			config,
+			bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
+			bootstrapv1beta1.DataSecretGenerationFailedV1Beta1Reason,
+			capiv1.ConditionSeverityError,
+			"%s",
+			err.Error(),
+		)
+		conditions.Set(config, metav1.Condition{
+			Type:    bootstrapv1beta1.DataSecretAvailableCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  bootstrapv1alpha3.DataSecretGenerationFailedReason,
+			Reason:  bootstrapv1beta1.DataSecretNotAvailableInternalErrorReason,
 			Message: fmt.Sprintf("Data secret generation failed: %s", err),
 		})
 
 		return ctrl.Result{}, err
 	}
 
-	config.Status.Ready = true
-	conditions.Set(config, v1.Condition{
-		Type:   bootstrapv1alpha3.DataSecretAvailableCondition,
-		Reason: bootstrapv1alpha3.DataSecretAvailableReason,
+	config.Status.Initialization.DataSecretCreated = ptr.To(true)
+
+	v1beta1conditions.MarkTrue(config, bootstrapv1beta1.DataSecretAvailableV1Beta1Condition)
+	conditions.Set(config, metav1.Condition{
+		Type:   bootstrapv1beta1.DataSecretAvailableCondition,
+		Reason: bootstrapv1beta1.DataSecretAvailableReason,
 		Status: metav1.ConditionTrue,
 	})
 
@@ -417,14 +455,13 @@ func (r *TalosConfigReconciler) reconcileGenerate(ctx context.Context, tcScope *
 		return err
 	}
 
-	config.Status.DataSecretName = &dataSecretName
-	config.Status.TalosConfig = retData.TalosConfig //nolint:staticcheck // deprecated, for backwards compatibility only
+	config.Status.DataSecretName = dataSecretName
 
 	return nil
 }
 
-func (r *TalosConfigReconciler) reconcileDelete(config *bootstrapv1alpha3.TalosConfig) (ctrl.Result, error) {
-	controllerutil.RemoveFinalizer(config, bootstrapv1alpha3.ConfigFinalizer)
+func (r *TalosConfigReconciler) reconcileDelete(config *bootstrapv1beta1.TalosConfig) (ctrl.Result, error) {
+	controllerutil.RemoveFinalizer(config, bootstrapv1beta1.ConfigFinalizer)
 
 	return ctrl.Result{}, nil
 }
@@ -592,7 +629,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 
 		talosVersion, parseErr := semver.NewVersion(strings.TrimLeft(scope.Config.Spec.TalosVersion, "v"))
 
-		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceMachineName {
+		if scope.Config.Spec.Hostname.Source == bootstrapv1beta1.HostnameSourceMachineName {
 			if parseErr == nil && talosVersion.GreaterThanEqual(semver.MustParse("1.12.0-beta.0")) {
 				hostnameCfg, err := newHostnameConfig(scope.ConfigOwner.GetName())
 				if err != nil {
@@ -605,7 +642,7 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 			}
 		}
 
-		if scope.Config.Spec.Hostname.Source == v1alpha3.HostnameSourceInfrastructureName {
+		if scope.Config.Spec.Hostname.Source == bootstrapv1beta1.HostnameSourceInfrastructureName {
 			machine := &capiv1.Machine{}
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(scope.ConfigOwner.Object, machine); err != nil {
 				return retBundle, patches, err
@@ -643,7 +680,7 @@ func (r *TalosConfigReconciler) MachineToBootstrapMapFunc(_ context.Context, o c
 	}
 
 	result := []ctrl.Request{}
-	if m.Spec.Bootstrap.ConfigRef.IsDefined() && m.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+	if m.Spec.Bootstrap.ConfigRef.IsDefined() && m.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1beta1.GroupVersion.WithKind("TalosConfig").GroupKind() {
 		name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.Bootstrap.ConfigRef.Name}
 		result = append(result, ctrl.Request{NamespacedName: name})
 	}
@@ -660,7 +697,7 @@ func (r *TalosConfigReconciler) MachinePoolToBootstrapMapFunc(_ context.Context,
 
 	result := []ctrl.Request{}
 	configRef := m.Spec.Template.Spec.Bootstrap.ConfigRef
-	if configRef.IsDefined() && configRef.GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+	if configRef.IsDefined() && configRef.GroupKind() == bootstrapv1beta1.GroupVersion.WithKind("TalosConfig").GroupKind() {
 		name := client.ObjectKey{Namespace: m.Namespace, Name: configRef.Name}
 		result = append(result, ctrl.Request{NamespacedName: name})
 	}
@@ -691,7 +728,7 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(ctx context.Context, o cli
 
 	for _, m := range machineList.Items {
 		if m.Spec.Bootstrap.ConfigRef.IsDefined() &&
-			m.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+			m.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1beta1.GroupVersion.WithKind("TalosConfig").GroupKind() {
 			name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.Bootstrap.ConfigRef.Name}
 			result = append(result, ctrl.Request{NamespacedName: name})
 		}
@@ -705,7 +742,7 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(ctx context.Context, o cli
 
 		for _, mp := range machinePoolList.Items {
 			if mp.Spec.Template.Spec.Bootstrap.ConfigRef.IsDefined() &&
-				mp.Spec.Template.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1alpha3.GroupVersion.WithKind("TalosConfig").GroupKind() {
+				mp.Spec.Template.Spec.Bootstrap.ConfigRef.GroupKind() == bootstrapv1beta1.GroupVersion.WithKind("TalosConfig").GroupKind() {
 				name := client.ObjectKey{Namespace: mp.Namespace, Name: mp.Spec.Template.Spec.Bootstrap.ConfigRef.Name}
 				result = append(result, ctrl.Request{NamespacedName: name})
 			}

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1beta1 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1beta1"
 	"github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
@@ -40,13 +40,12 @@ func TestIntegration(t *testing.T) {
 
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 		})
 		createMachine(ctx, t, c, cluster, talosConfig, true)
 		waitForReady(ctx, t, c, talosConfig)
 
-		assertClientConfig(t, talosConfig)
 		assertClusterClientConfig(ctx, t, c, cluster)
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -64,7 +63,7 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
-		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
+		controlplanes := []*bootstrapv1beta1.TalosConfig{}
 		controlplaneMachines := []*capiv1.Machine{}
 
 		for i := range 3 {
@@ -74,7 +73,7 @@ func TestIntegration(t *testing.T) {
 				machineType = talosmachine.TypeControlPlane
 			}
 
-			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 				GenerateType: machineType.String(),
 				TalosVersion: TalosVersion,
 			})
@@ -83,11 +82,11 @@ func TestIntegration(t *testing.T) {
 			controlplanes = append(controlplanes, talosConfig)
 		}
 
-		workers := []*bootstrapv1alpha3.TalosConfig{}
+		workers := []*bootstrapv1beta1.TalosConfig{}
 		workerMachines := []*capiv1.Machine{}
 
 		for range 4 {
-			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 				GenerateType: talosmachine.TypeWorker.String(),
 				TalosVersion: TalosVersion,
 			})
@@ -96,10 +95,8 @@ func TestIntegration(t *testing.T) {
 			workers = append(workers, talosConfig)
 		}
 
-		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
+		for i, talosConfig := range append(append([]*bootstrapv1beta1.TalosConfig{}, controlplanes...), workers...) {
 			waitForReady(ctx, t, c, talosConfig)
-
-			assertClientConfig(t, talosConfig)
 
 			provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
@@ -121,7 +118,7 @@ func TestIntegration(t *testing.T) {
 		assertSameMachineConfigSecrets(ctx, t, c, controlplanes...)
 
 		// compare all configs in more relaxed mode
-		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
+		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1beta1.TalosConfig{}, controlplanes...), workers...)...)
 
 		// attach addresses to machines
 		ip := netip.MustParseAddr("10.5.0.2")
@@ -170,7 +167,7 @@ func TestIntegration(t *testing.T) {
 				Port: 443,
 			},
 		})
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 		})
@@ -191,7 +188,7 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 			StrategicPatches: []string{
@@ -215,7 +212,7 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
 
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 			StrategicPatches: []string{
@@ -251,7 +248,7 @@ func TestIntegration(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(legacySecretData), &clusterSecret.Data))
 		require.NoError(t, c.Create(ctx, &clusterSecret))
 
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: "v0.13",
 		})
@@ -282,7 +279,7 @@ func TestIntegration(t *testing.T) {
 		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", "v1.22.2", generate.WithSecretsBundle(secretsBundle))
 		require.NoError(t, err)
 
-		workers := []*bootstrapv1alpha3.TalosConfig{}
+		workers := []*bootstrapv1beta1.TalosConfig{}
 
 		for range 4 {
 			machineconfig, err := input.Config(talosmachine.TypeWorker)
@@ -291,7 +288,7 @@ func TestIntegration(t *testing.T) {
 			configdata, err := machineconfig.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 			require.NoError(t, err)
 
-			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 				GenerateType: "none",
 				Data:         configdata,
 			})
@@ -300,7 +297,7 @@ func TestIntegration(t *testing.T) {
 			workers = append(workers, talosConfig)
 		}
 
-		controlplanes := []*bootstrapv1alpha3.TalosConfig{}
+		controlplanes := []*bootstrapv1beta1.TalosConfig{}
 
 		for i := range 3 {
 			machineType := talosmachine.TypeInit
@@ -315,7 +312,7 @@ func TestIntegration(t *testing.T) {
 			configdata, err := machineconfig.EncodeString(encoder.WithComments(encoder.CommentsDisabled))
 			require.NoError(t, err)
 
-			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+			talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 				GenerateType: "none",
 				Data:         configdata,
 			})
@@ -324,7 +321,7 @@ func TestIntegration(t *testing.T) {
 			controlplanes = append(controlplanes, talosConfig)
 		}
 
-		for i, talosConfig := range append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...) {
+		for i, talosConfig := range append(append([]*bootstrapv1beta1.TalosConfig{}, controlplanes...), workers...) {
 			waitForReady(ctx, t, c, talosConfig)
 
 			provider := assertMachineConfiguration(ctx, t, c, talosConfig)
@@ -337,11 +334,6 @@ func TestIntegration(t *testing.T) {
 			default:
 				assert.Equal(t, talosmachine.TypeWorker, provider.Machine().Type())
 			}
-
-			if provider.Machine().Type() != talosmachine.TypeWorker {
-				// with user config, can only generate config for controlplane nodes
-				assertClientConfig(t, talosConfig)
-			}
 		}
 
 		assertClusterCA(ctx, t, c, cluster, assertMachineConfiguration(ctx, t, c, controlplanes[0]))
@@ -350,7 +342,7 @@ func TestIntegration(t *testing.T) {
 		assertSameMachineConfigSecrets(ctx, t, c, controlplanes...)
 
 		// compare all configs in more relaxed mode
-		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1alpha3.TalosConfig{}, controlplanes...), workers...)...)
+		assertCompatibleMachineConfigs(ctx, t, c, append(append([]*bootstrapv1beta1.TalosConfig{}, controlplanes...), workers...)...)
 	})
 
 	t.Run("BadConfigPatch", func(t *testing.T) {
@@ -361,10 +353,10 @@ func TestIntegration(t *testing.T) {
 
 		namespaceName := setupTest(ctx, t, c)
 		cluster := createCluster(ctx, t, c, namespaceName, nil)
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
-			ConfigPatches: []bootstrapv1alpha3.ConfigPatches{
+			ConfigPatches: []bootstrapv1beta1.ConfigPatches{
 				{
 					Op:   "add",
 					Path: "/machine/time/servers",
@@ -386,8 +378,8 @@ func TestIntegration(t *testing.T) {
 			err := c.Get(ctx, key, talosConfig)
 			require.NoError(t, err)
 
-			if conditions.IsFalse(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) &&
-				conditions.GetReason(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition) == bootstrapv1alpha3.DataSecretGenerationFailedReason {
+			if conditions.IsFalse(talosConfig, bootstrapv1beta1.DataSecretAvailableCondition) &&
+				conditions.GetReason(talosConfig, bootstrapv1beta1.DataSecretAvailableCondition) == bootstrapv1beta1.DataSecretNotAvailableInternalErrorReason {
 				break
 			}
 
@@ -399,7 +391,7 @@ func TestIntegration(t *testing.T) {
 
 		assert.Equal(t,
 			"Data secret generation failed: JSON6902 patches are not supported for multi-document machine configuration",
-			conditions.GetMessage(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+			conditions.GetMessage(talosConfig, bootstrapv1beta1.DataSecretAvailableCondition))
 	})
 
 	t.Run("HostnameFromMachineName", func(t *testing.T) {
@@ -412,11 +404,11 @@ func TestIntegration(t *testing.T) {
 				Port: 443,
 			},
 		})
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: TalosVersion,
-			Hostname: bootstrapv1alpha3.HostnameSpec{
-				Source: bootstrapv1alpha3.HostnameSourceMachineName,
+			Hostname: bootstrapv1beta1.HostnameSpec{
+				Source: bootstrapv1beta1.HostnameSourceMachineName,
 			},
 		})
 		machine := createMachine(ctx, t, c, cluster, talosConfig, true)
@@ -436,11 +428,11 @@ func TestIntegration(t *testing.T) {
 				Port: 443,
 			},
 		})
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1beta1.TalosConfigSpec{
 			GenerateType: talosmachine.TypeControlPlane.String(),
 			TalosVersion: TalosVersion,
-			Hostname: bootstrapv1alpha3.HostnameSpec{
-				Source: bootstrapv1alpha3.HostnameSourceInfrastructureName,
+			Hostname: bootstrapv1beta1.HostnameSpec{
+				Source: bootstrapv1beta1.HostnameSourceInfrastructureName,
 			},
 		})
 		machine := createMachine(ctx, t, c, cluster, talosConfig, true)
@@ -457,13 +449,14 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 
 		talosConfigName := generateName(t, "talosconfig")
-		talosConfig := &bootstrapv1alpha3.TalosConfig{
+		talosConfig := &bootstrapv1beta1.TalosConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespaceName,
 				Name:      talosConfigName,
 			},
-			Spec: bootstrapv1alpha3.TalosConfigSpec{
-				Hostname: bootstrapv1alpha3.HostnameSpec{
+			Spec: bootstrapv1beta1.TalosConfigSpec{
+				GenerateType: "controlplane",
+				Hostname: bootstrapv1beta1.HostnameSpec{
 					Source: "foo",
 				},
 			},
@@ -493,15 +486,16 @@ func TestIntegration(t *testing.T) {
 		namespaceName := setupTest(ctx, t, c)
 
 		talosConfigTemplateName := generateName(t, "talosconfigtemplate")
-		talosConfigTemplate := &bootstrapv1alpha3.TalosConfigTemplate{
+		talosConfigTemplate := &bootstrapv1beta1.TalosConfigTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespaceName,
 				Name:      talosConfigTemplateName,
 			},
-			Spec: bootstrapv1alpha3.TalosConfigTemplateSpec{
-				Template: bootstrapv1alpha3.TalosConfigTemplateResource{
-					Spec: bootstrapv1alpha3.TalosConfigSpec{
+			Spec: bootstrapv1beta1.TalosConfigTemplateSpec{
+				Template: bootstrapv1beta1.TalosConfigTemplateResource{
+					Spec: bootstrapv1beta1.TalosConfigSpec{
 						TalosVersion: "v0.1.0",
+						GenerateType: "worker",
 					},
 				},
 			},

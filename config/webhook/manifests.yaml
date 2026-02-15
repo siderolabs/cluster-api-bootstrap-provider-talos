@@ -10,14 +10,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfig
+      path: /validate-bootstrap-cluster-x-k8s-io-v1beta1-talosconfig
   failurePolicy: Fail
   name: vtalosconfig.cluster.x-k8s.io
   rules:
   - apiGroups:
     - bootstrap.cluster.x-k8s.io
     apiVersions:
-    - v1alpha3
+    - v1beta1
     operations:
     - CREATE
     - UPDATE
@@ -30,14 +30,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-bootstrap-cluster-x-k8s-io-v1alpha3-talosconfigtemplate
+      path: /validate-bootstrap-cluster-x-k8s-io-v1beta1-talosconfigtemplate
   failurePolicy: Fail
   name: vtalosconfigtemplate.cluster.x-k8s.io
   rules:
   - apiGroups:
     - bootstrap.cluster.x-k8s.io
     apiVersions:
-    - v1alpha3
+    - v1beta1
     operations:
     - UPDATE
     resources:

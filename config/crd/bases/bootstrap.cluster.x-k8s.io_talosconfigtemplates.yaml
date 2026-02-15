@@ -16,52 +16,6 @@ spec:
     singular: talosconfigtemplate
   scope: Namespaced
   versions:
-  - name: v1alpha2
-    schema:
-      openAPIV3Schema:
-        description: TalosConfigTemplate is the Schema for the talosconfigtemplates
-          API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: TalosConfigTemplateSpec defines the desired state of TalosConfigTemplate
-            properties:
-              template:
-                description: TalosConfigTemplateResource defines the Template structure
-                properties:
-                  spec:
-                    description: TalosConfigSpec defines the desired state of TalosConfig
-                    properties:
-                      data:
-                        type: string
-                      generateType:
-                        type: string
-                    required:
-                    - generateType
-                    type: object
-                type: object
-            required:
-            - template
-            type: object
-        type: object
-    served: true
-    storage: false
   - name: v1alpha3
     schema:
       openAPIV3Schema:
@@ -132,6 +86,116 @@ spec:
                           type: string
                         type: array
                       talosVersion:
+                        type: string
+                    required:
+                    - generateType
+                    type: object
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Name of the ClusterClass owning this template
+      jsonPath: .metadata.ownerReferences[?(@.kind=="ClusterClass")].name
+      name: ClusterClass
+      type: string
+    - description: Name of the Cluster owning this template
+      jsonPath: .metadata.ownerReferences[?(@.kind=="Cluster")].name
+      name: Cluster
+      type: string
+    - description: Time duration since creation of TalosConfigTemplate
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: TalosConfigTemplate is the Schema for the talosconfigtemplates
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TalosConfigTemplateSpec defines the desired state of TalosConfigTemplate
+            properties:
+              template:
+                description: TalosConfigTemplateResource defines the Template structure
+                properties:
+                  spec:
+                    description: TalosConfigSpec defines the desired state of TalosConfig
+                    properties:
+                      configPatches:
+                        description: RFC6902 JSON patches to apply to machine configuration.
+                        items:
+                          properties:
+                            op:
+                              type: string
+                            path:
+                              type: string
+                            value:
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                          - op
+                          - path
+                          type: object
+                        type: array
+                      data:
+                        description: Machine configuration in case generateType=none.
+                        type: string
+                      generateType:
+                        description: |-
+                          Talos machine configuration type to generate: Supported values are:
+                          controlplane, worker, init (deprecated), none (configuration must be then provided in data field).
+                        enum:
+                        - controlplane
+                        - worker
+                        - init
+                        - none
+                        type: string
+                      hostname:
+                        description: Set hostname in the machine configuration to
+                          some value.
+                        properties:
+                          source:
+                            description: |-
+                              Source of the hostname.
+
+                              Allowed values:
+                              "MachineName" (use linked Machine's Name).
+                              "InfrastructureName" (use linked Machine's infrastructure's name).
+                            type: string
+                        type: object
+                      strategicPatches:
+                        description: Talos Linux machine configuration strategic merge
+                          patch list.
+                        items:
+                          type: string
+                        type: array
+                      talosVersion:
+                        description: |-
+                          Version of Talos to generate machine configuration for, i.e. v1.0 (patch version may be omitted).
+                          Defaults to the latest supported version if unspecified.
+                          It is recommended to set this field explicitly to avoid unexpected issues during provider upgrades.
                         type: string
                     required:
                     - generateType

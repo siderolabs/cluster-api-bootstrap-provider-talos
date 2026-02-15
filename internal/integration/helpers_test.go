@@ -22,13 +22,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capdv1 "sigs.k8s.io/cluster-api/test/infrastructure/docker/api/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	bootstrapv1beta1 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -118,7 +119,7 @@ func createCluster(ctx context.Context, t *testing.T, c client.Client, namespace
 }
 
 // createMachine creates a Machine owned by the Cluster.
-func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, talosconfig *bootstrapv1alpha3.TalosConfig, controlplane bool) *capiv1.Machine {
+func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *capiv1.Cluster, talosconfig *bootstrapv1beta1.TalosConfig, controlplane bool) *capiv1.Machine {
 	t.Helper()
 
 	labels := map[string]string{
@@ -141,7 +142,7 @@ func createMachine(ctx context.Context, t *testing.T, c client.Client, cluster *
 			Bootstrap: capiv1.Bootstrap{
 				ConfigRef: capiv1.ContractVersionedObjectReference{
 					Kind:     "TalosConfig",
-					APIGroup: bootstrapv1alpha3.GroupVersion.Group,
+					APIGroup: bootstrapv1beta1.GroupVersion.Group,
 					Name:     talosconfig.GetName(),
 				},
 			},
@@ -176,11 +177,11 @@ func patchMachineAddress(ctx context.Context, t *testing.T, c client.Client, mac
 }
 
 // createTalosConfig creates a TalosConfig owned by the Machine.
-func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec bootstrapv1alpha3.TalosConfigSpec) *bootstrapv1alpha3.TalosConfig {
+func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, namespaceName string, spec bootstrapv1beta1.TalosConfigSpec) *bootstrapv1beta1.TalosConfig {
 	t.Helper()
 
 	talosConfigName := generateName(t, "talosconfig")
-	talosConfig := &bootstrapv1alpha3.TalosConfig{
+	talosConfig := &bootstrapv1beta1.TalosConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespaceName,
 			Name:      talosConfigName,
@@ -202,7 +203,7 @@ func createTalosConfig(ctx context.Context, t *testing.T, c client.Client, names
 }
 
 // waitForReady waits for TalosConfig to be reconciled (ready).
-func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1alpha3.TalosConfig) {
+func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfig *bootstrapv1beta1.TalosConfig) {
 	t.Helper()
 
 	key := types.NamespacedName{
@@ -217,7 +218,7 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		err := c.Get(ctx, key, talosConfig)
 		require.NoError(t, err)
 
-		if talosConfig.Status.Ready {
+		if ptr.Deref(talosConfig.Status.Initialization.DataSecretCreated, false) {
 			break
 		}
 
@@ -229,7 +230,7 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		return
 	}
 
-	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1alpha3.DataSecretAvailableCondition))
+	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1beta1.DataSecretAvailableCondition))
 
 	if talosConfig.Spec.GenerateType == talosmachine.TypeInit.String() || talosConfig.Spec.GenerateType == talosmachine.TypeControlPlane.String() {
 		// wait for additional condition
@@ -238,7 +239,7 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 			err := c.Get(ctx, key, talosConfig)
 			require.NoError(t, err)
 
-			if conditions.IsTrue(talosConfig, bootstrapv1alpha3.ClientConfigAvailableCondition) {
+			if conditions.IsTrue(talosConfig, bootstrapv1beta1.ClientConfigAvailableCondition) {
 				break
 			}
 

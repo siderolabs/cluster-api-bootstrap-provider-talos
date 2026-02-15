@@ -16,65 +16,6 @@ spec:
     singular: talosconfig
   scope: Namespaced
   versions:
-  - name: v1alpha2
-    schema:
-      openAPIV3Schema:
-        description: TalosConfig is the Schema for the talosconfigs API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: TalosConfigSpec defines the desired state of TalosConfig
-            properties:
-              data:
-                type: string
-              generateType:
-                type: string
-            required:
-            - generateType
-            type: object
-          status:
-            description: TalosConfigStatus defines the observed state of TalosConfig
-            properties:
-              bootstrapData:
-                description: BootstrapData will be a slice of bootstrap data
-                format: byte
-                type: string
-              errorMessage:
-                description: ErrorMessage will be set on non-retryable errors
-                type: string
-              errorReason:
-                description: ErrorReason will be set on non-retryable errors
-                type: string
-              ready:
-                description: Ready indicates the BootstrapData field is ready to be
-                  consumed
-                type: boolean
-              talosConfig:
-                description: Talos config will be a string containing the config for
-                  download
-                type: string
-            type: object
-        type: object
-    served: true
-    storage: false
-    subresources:
-      status: {}
   - name: v1alpha3
     schema:
       openAPIV3Schema:
@@ -147,6 +88,265 @@ spec:
               conditions:
                 description: Conditions defines current service state of the TalosConfig.
                 items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This field may be empty.
+                      maxLength: 10240
+                      minLength: 1
+                      type: string
+                    reason:
+                      description: |-
+                        reason is the reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may be empty.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    severity:
+                      description: |-
+                        severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      maxLength: 32
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              dataSecretName:
+                description: DataSecretName is the name of the secret that stores
+                  the bootstrap data script.
+                type: string
+              failureMessage:
+                description: |-
+                  FailureMessage will be set on non-retryable errors
+
+                  Deprecated: this field will be removed in the next apiVersion.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set on non-retryable errors
+
+                  Deprecated: this field will be removed in the next apiVersion.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the latest generation observed
+                  by the controller.
+                format: int64
+                type: integer
+              ready:
+                description: Ready indicates the BootstrapData field is ready to be
+                  consumed
+                type: boolean
+              talosConfig:
+                description: |-
+                  Talos config will be a string containing the config for download.
+
+                  Deprecated: please use `<cluster>-talosconfig` secret.
+                type: string
+              v1beta2Status:
+                description: v1beta2 groups all the fields that will be added or modified
+                  in TalosConfig's status with the V1Beta2 version.
+                properties:
+                  conditions:
+                    description: |-
+                      Conditions represents the observations of a TalosConfig's current state.
+                      Known condition types are Ready, DataSecretAvailable, ClientConfigAvailable.
+                    items:
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
+                      properties:
+                        lastTransitionTime:
+                          description: |-
+                            lastTransitionTime is the last time the condition transitioned from one status to another.
+                            This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                          format: date-time
+                          type: string
+                        message:
+                          description: |-
+                            message is a human readable message indicating details about the transition.
+                            This may be an empty string.
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          description: |-
+                            observedGeneration represents the .metadata.generation that the condition was set based upon.
+                            For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                            with respect to the current state of the instance.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          description: |-
+                            reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                            Producers of specific condition types may define expected values and meanings for this field,
+                            and whether the values are considered a guaranteed API.
+                            The value should be a CamelCase string.
+                            This field may not be empty.
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          description: status of the condition, one of True, False,
+                            Unknown.
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Cluster
+      jsonPath: .metadata.labels['cluster\.x-k8s\.io/cluster-name']
+      name: Cluster
+      type: string
+    - description: Bootstrap secret is created
+      jsonPath: .status.initialization.dataSecretCreated
+      name: Initialized
+      type: string
+    - description: Bootstrap secret name
+      jsonPath: .status.dataSecretName
+      name: Bootstrap secret
+      type: string
+    - description: Time duration since creation of TalosConfig
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: TalosConfig is the Schema for the talosconfigs API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TalosConfigSpec defines the desired state of TalosConfig
+            properties:
+              configPatches:
+                description: RFC6902 JSON patches to apply to machine configuration.
+                items:
+                  properties:
+                    op:
+                      type: string
+                    path:
+                      type: string
+                    value:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - op
+                  - path
+                  type: object
+                type: array
+              data:
+                description: Machine configuration in case generateType=none.
+                type: string
+              generateType:
+                description: |-
+                  Talos machine configuration type to generate: Supported values are:
+                  controlplane, worker, init (deprecated), none (configuration must be then provided in data field).
+                enum:
+                - controlplane
+                - worker
+                - init
+                - none
+                type: string
+              hostname:
+                description: Set hostname in the machine configuration to some value.
+                properties:
+                  source:
+                    description: |-
+                      Source of the hostname.
+
+                      Allowed values:
+                      "MachineName" (use linked Machine's Name).
+                      "InfrastructureName" (use linked Machine's infrastructure's name).
+                    type: string
+                type: object
+              strategicPatches:
+                description: Talos Linux machine configuration strategic merge patch
+                  list.
+                items:
+                  type: string
+                type: array
+              talosVersion:
+                description: |-
+                  Version of Talos to generate machine configuration for, i.e. v1.0 (patch version may be omitted).
+                  Defaults to the latest supported version if unspecified.
+                  It is recommended to set this field explicitly to avoid unexpected issues during provider upgrades.
+                type: string
+            required:
+            - generateType
+            type: object
+          status:
+            description: TalosConfigStatus defines the observed state of TalosConfig
+            properties:
+              conditions:
+                description: |-
+                  Conditions represents the observations of a TalosConfig's current state.
+                  Known condition types are Ready, DataSecretAvailable, ClientConfigAvailable.
+                items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
                   properties:
@@ -201,31 +401,112 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               dataSecretName:
                 description: DataSecretName is the name of the secret that stores
                   the bootstrap data script.
+                maxLength: 253
+                minLength: 1
                 type: string
-              failureMessage:
-                description: FailureMessage will be set on non-retryable errors
-                type: string
-              failureReason:
-                description: FailureReason will be set on non-retryable errors
-                type: string
+              deprecated:
+                description: deprecated groups all the status fields that are deprecated
+                  and will be removed when all the nested field are removed.
+                properties:
+                  v1beta:
+                    description: v1beta1 groups all the status fields that are deprecated
+                      and will be removed when support for CAPI v1beta1 contract will
+                      be dropped.
+                    properties:
+                      conditions:
+                        description: |-
+                          conditions defines current service state of the TalosConfig.
+
+                          Deprecated: This field is deprecated and is going to be removed when support for CAPI v1beta1 contract will be dropped.
+                        items:
+                          description: Condition defines an observation of a Cluster
+                            API resource operational state.
+                          properties:
+                            lastTransitionTime:
+                              description: |-
+                                lastTransitionTime is the last time the condition transitioned from one status to another.
+                                This should be when the underlying condition changed. If that is not known, then using the time when
+                                the API field changed is acceptable.
+                              format: date-time
+                              type: string
+                            message:
+                              description: |-
+                                message is a human readable message indicating details about the transition.
+                                This field may be empty.
+                              maxLength: 10240
+                              minLength: 1
+                              type: string
+                            reason:
+                              description: |-
+                                reason is the reason for the condition's last transition in CamelCase.
+                                The specific API may choose whether or not this field is considered a guaranteed API.
+                                This field may be empty.
+                              maxLength: 256
+                              minLength: 1
+                              type: string
+                            severity:
+                              description: |-
+                                severity provides an explicit classification of Reason code, so the users or machines can immediately
+                                understand the current situation and act accordingly.
+                                The Severity field MUST be set only when Status=False.
+                              maxLength: 32
+                              type: string
+                            status:
+                              description: status of the condition, one of True, False,
+                                Unknown.
+                              type: string
+                            type:
+                              description: |-
+                                type of condition in CamelCase or in foo.example.com/CamelCase.
+                                Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                                can be useful (see .node.status.conditions), the ability to deconflict is important.
+                              maxLength: 256
+                              minLength: 1
+                              type: string
+                          required:
+                          - lastTransitionTime
+                          - status
+                          - type
+                          type: object
+                        type: array
+                      failureMessage:
+                        description: |-
+                          failureMessage will be set on non-retryable errors
+
+                          Deprecated: This field is deprecated and is going to be removed when support for CAPI v1beta1 contract will be dropped.
+                        type: string
+                      failureReason:
+                        description: |-
+                          failureReason will be set on non-retryable errors
+
+                          Deprecated: This field is deprecated and is going to be removed when support for CAPI v1beta1 contract will be dropped.
+                        type: string
+                    type: object
+                type: object
+              initialization:
+                description: |-
+                  initialization provides observations of the TalosConfig initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+                minProperties: 1
+                properties:
+                  dataSecretCreated:
+                    description: |-
+                      dataSecretCreated is true when the Machine's bootstrap secret is created.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
+                    type: boolean
+                type: object
               observedGeneration:
-                description: ObservedGeneration is the latest generation observed
-                  by the controller.
+                description: |-
+                  ObservedGeneration is the latest generation observed by the controller.
+                  kubebuilder:validation:Minimum=1
                 format: int64
                 type: integer
-              ready:
-                description: Ready indicates the BootstrapData field is ready to be
-                  consumed
-                type: boolean
-              talosConfig:
-                description: |-
-                  Talos config will be a string containing the config for download.
-
-                  Deprecated: please use `<cluster>-talosconfig` secret.
-                type: string
             type: object
         type: object
     served: true

@@ -16,6 +16,7 @@ spec:
         - _string.go
         - _enumer.go
         - _string_linux.go
+        - conversion.go
         - zz_generated.conversion.go
         - zz_generated.deepcopy.go
       header: |

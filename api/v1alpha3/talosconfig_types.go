@@ -6,6 +6,7 @@ package v1alpha3
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 const (
@@ -62,10 +63,16 @@ type TalosConfigStatus struct {
 	TalosConfig string `json:"talosConfig,omitempty"`
 
 	// FailureReason will be set on non-retryable errors
+	//
+	// Deprecated: this field will be removed in the next apiVersion.
+	//
 	// +optional
 	FailureReason string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set on non-retryable errors
+	//
+	// Deprecated: this field will be removed in the next apiVersion.
+	//
 	// +optional
 	FailureMessage string `json:"failureMessage,omitempty"`
 
@@ -75,12 +82,24 @@ type TalosConfigStatus struct {
 
 	// Conditions defines current service state of the TalosConfig.
 	// +optional
+	Conditions capiv1.Conditions `json:"conditions,omitempty"`
+
+	// v1beta2 groups all the fields that will be added or modified in TalosConfig's status with the V1Beta2 version.
+	// +optional
+	V1Beta2 *TalosConfigV1Beta2Status `json:"v1beta2Status,omitempty"`
+}
+
+type TalosConfigV1Beta2Status struct {
+	// Conditions represents the observations of a TalosConfig's current state.
+	// Known condition types are Ready, DataSecretAvailable, ClientConfigAvailable.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=talosconfigs,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 
 // TalosConfig is the Schema for the talosconfigs API
@@ -93,13 +112,29 @@ type TalosConfig struct {
 }
 
 // GetConditions returns the set of conditions for this object.
-func (c *TalosConfig) GetConditions() []metav1.Condition {
+func (c *TalosConfig) GetConditions() capiv1.Conditions {
 	return c.Status.Conditions
 }
 
 // SetConditions sets the conditions on this object.
-func (c *TalosConfig) SetConditions(conditions []metav1.Condition) {
+func (c *TalosConfig) SetConditions(conditions capiv1.Conditions) {
 	c.Status.Conditions = conditions
+}
+
+// GetV1Beta2Conditions returns the set of conditions for this object.
+func (c *TalosConfig) GetV1Beta2Conditions() []metav1.Condition {
+	if c.Status.V1Beta2 == nil {
+		return nil
+	}
+	return c.Status.V1Beta2.Conditions
+}
+
+// SetV1Beta2Conditions sets conditions for an API object.
+func (c *TalosConfig) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	if c.Status.V1Beta2 == nil {
+		c.Status.V1Beta2 = &TalosConfigV1Beta2Status{}
+	}
+	c.Status.V1Beta2.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true

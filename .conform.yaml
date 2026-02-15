@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-17T11:26:26Z by kres e1d6dac.
+# Generated on 2026-02-23T16:51:58Z by kres 6458cfd.
 
 policies:
   - type: commit
@@ -43,6 +43,7 @@ policies:
         - _string.go
         - _enumer.go
         - _string_linux.go
+        - conversion.go
         - zz_generated.conversion.go
         - zz_generated.deepcopy.go
       header: |
