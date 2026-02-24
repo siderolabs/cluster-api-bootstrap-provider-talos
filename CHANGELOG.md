@@ -1,3 +1,59 @@
+## [CAPI Bootstrap Provider Talos 0.7.0-alpha.1](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.7.0-alpha.1) (2026-02-24)
+
+Welcome to the v0.7.0-alpha.1 release of CAPI Bootstrap Provider Talos!  
+*This is a pre-release of CAPI Bootstrap Provider Talos*
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI
+
+CABPT is now compatible with CAPI v1.12.0+ (v1beta2).
+
+
+### Contributors
+
+* Jedrzej Kotkowski
+* Andrey Smirnov
+* Steffen Karlsson
+
+### Changes
+<details><summary>4 commits</summary>
+<p>
+
+* [`12f2cd1`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/12f2cd19127f7fcd27c1795ed8ac7b7f4be3e87e) feat: implement CAPI v1beta2 contract, new talosconfig v1beta1 API version
+* [`f1a2e0b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/f1a2e0b1b728ebbe6fca439054d803c419ee9022) fix: rbac for machinepools
+* [`0d8612c`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/0d8612c8bd8a35642d6b8144b7e21e50b6c084ee) release(v0.7.0-alpha.0): prepare release
+* [`d585115`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/d58511566c893addc32ebcbd5db584437834e8cb) feat: upgrade to CAPI v1.12.x
+</p>
+</details>
+
+### Changes since v0.7.0
+<details><summary>1 commit</summary>
+<p>
+
+* [`12f2cd1`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/12f2cd19127f7fcd27c1795ed8ac7b7f4be3e87e) feat: implement CAPI v1beta2 contract, new talosconfig v1beta1 API version
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/Masterminds/semver/v3**  v3.3.0 -> v3.4.0
+* **github.com/spf13/pflag**            v1.0.7 -> v1.0.10
+* **k8s.io/api**                        v0.32.3 -> v0.34.3
+* **k8s.io/apiextensions-apiserver**    v0.32.3 -> v0.34.3
+* **k8s.io/apimachinery**               v0.32.3 -> v0.34.3
+* **k8s.io/client-go**                  v0.32.3 -> v0.34.3
+* **k8s.io/component-base**             v0.32.3 -> v0.34.3
+* **k8s.io/utils**                      4c0f3b243397 **_new_**
+* **sigs.k8s.io/cluster-api**           v1.10.9 -> v1.12.2
+* **sigs.k8s.io/cluster-api/test**      v1.12.2 **_new_**
+* **sigs.k8s.io/controller-runtime**    v0.20.4 -> v0.22.5
+
+Previous release can be found at [v0.6.11](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.11)
+
 ## [CAPI Bootstrap Provider Talos 0.7.0-alpha.0](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.7.0-alpha.0) (2026-02-03)
 
 Welcome to the v0.7.0-alpha.0 release of CAPI Bootstrap Provider Talos!  
