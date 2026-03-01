@@ -1,4 +1,4 @@
-# syntax = docker/dockerfile-upstream:1.14.1-labs
+# syntax = docker/dockerfile-upstream:1.21.0-labs
 
 # Meta args applied to stage base names.
 
@@ -62,7 +62,7 @@ RUN --mount=type=cache,target=/.cache go test -race -ldflags "${GO_LDFLAGS}" -co
 FROM scratch AS integration-test
 COPY --from=integration-test-build /src/integration.test /integration.test
 
-FROM --platform=${BUILDPLATFORM} alpine:3.21 AS release-build
+FROM --platform=${BUILDPLATFORM} alpine:3.23 AS release-build
 ADD https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.0/kustomize_v4.1.0_linux_amd64.tar.gz .
 RUN  tar -xf kustomize_v4.1.0_linux_amd64.tar.gz -C /usr/local/bin && rm kustomize_v4.1.0_linux_amd64.tar.gz
 COPY ./config ./config
