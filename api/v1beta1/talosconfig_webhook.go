@@ -10,36 +10,32 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *TalosConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	return ctrl.NewWebhookManagedBy(mgr, r).
 		WithValidator(r).
 		Complete()
 }
 
 //+kubebuilder:webhook:verbs=create;update,path=/validate-bootstrap-cluster-x-k8s-io-v1beta1-talosconfig,mutating=false,failurePolicy=fail,groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,versions=v1beta1,name=vtalosconfig.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1
 
-var _ webhook.CustomValidator = &TalosConfig{}
+var _ admission.Validator[*TalosConfig] = &TalosConfig{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	r = obj.(*TalosConfig)
-
+// ValidateCreate implements admission.Validator so a webhook will be registered for the type
+func (r *TalosConfig) ValidateCreate(ctx context.Context, obj *TalosConfig) (admission.Warnings, error) {
+	r = obj
 	return nil, r.validate()
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	old := oldObj.(*TalosConfig)
-	r = newObj.(*TalosConfig)
+// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
+func (r *TalosConfig) ValidateUpdate(ctx context.Context, oldObj *TalosConfig, newObj *TalosConfig) (admission.Warnings, error) {
+	old := oldObj
+	r = newObj
 
 	if !cmp.Equal(r.Spec, old.Spec) {
 		return nil, apierrors.NewBadRequest("TalosConfig.Spec is immutable")
@@ -48,8 +44,8 @@ func (r *TalosConfig) ValidateUpdate(ctx context.Context, oldObj runtime.Object,
 	return nil, r.validate()
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *TalosConfig) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator so a webhook will be registered for the type
+func (r *TalosConfig) ValidateDelete(ctx context.Context, obj *TalosConfig) (admission.Warnings, error) {
 	return nil, nil
 }
 
