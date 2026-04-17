@@ -18,5 +18,11 @@ pre_release = true
 CABPT is now compatible with CAPI v1.12.0+ (v1beta2).
 """
 
+[notes.Talos]
+    title = "Talos 1.13"
+    description = """\
+CABPT is now compatible with Talos v1.13.0+.
+"""
+
 preface = """\
 """
