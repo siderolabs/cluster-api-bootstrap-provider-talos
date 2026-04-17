@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-17T11:45:00Z by kres e1d6dac.
+# Generated on 2026-04-17T16:42:40Z by kres 15ff2fd.
 
 "on":
   workflow_run:
@@ -18,7 +18,7 @@ jobs:
     if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request'
     steps:
       - name: Slack Notify
-        uses: slackapi/slack-github-action@v2
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # version: v3.0.1
         with:
           method: chat.postMessage
           payload: |
