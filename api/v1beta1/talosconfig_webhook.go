@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/cluster-api/util/topology"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -37,7 +38,13 @@ func (r *TalosConfig) ValidateUpdate(ctx context.Context, oldObj *TalosConfig, n
 	old := oldObj
 	r = newObj
 
-	if !cmp.Equal(r.Spec, old.Spec) {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Skip the immutability check if the request is a dry-run issued by the topology controller (#257)
+	if !topology.IsDryRunRequest(req, r) && !cmp.Equal(r.Spec, old.Spec) {
 		return nil, apierrors.NewBadRequest("TalosConfig.Spec is immutable")
 	}
 

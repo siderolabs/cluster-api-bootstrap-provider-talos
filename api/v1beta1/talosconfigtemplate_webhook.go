@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/cluster-api/util/topology"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -33,7 +34,13 @@ func (r *TalosConfigTemplate) ValidateUpdate(ctx context.Context, oldObj *TalosC
 	old := oldObj
 	r = newObj
 
-	if !cmp.Equal(r.Spec, old.Spec) {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Skip the immutability check if the request is a dry-run issued by the topology controller (#257)
+	if !topology.IsDryRunRequest(req, r) && !cmp.Equal(r.Spec, old.Spec) {
 		return nil, apierrors.NewBadRequest("TalosConfigTemplate.Spec is immutable")
 	}
 
