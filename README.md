@@ -1,5 +1,14 @@
 # Cluster API Bootstrap Provider Talos (CABPT)
 
+<!-- textlint-disable -->
+> [!CAUTION]
+> Sidero Labs is no longer actively developing Cluster API Bootstrap Provider Talos.
+>
+> For an alternative, please see [Omni](https://github.com/siderolabs/omni.git).
+>
+> Unless you have an existing support contract covering Cluster API Bootstrap Provider Talos, all support will be provided by the community (including questions in our Slack workspace).
+<!-- textlint-enable -->
+
 ## Intro
 
 The Cluster API Bootstrap Provider Talos (CABPT) is a project by [Sidero Labs](https://siderolabs.com/) that provides a [Cluster API](https://github.com/kubernetes-sigs/cluster-api) (CAPI) bootstrap provider for use in deploying Talos-based Kubernetes nodes across any environment.
