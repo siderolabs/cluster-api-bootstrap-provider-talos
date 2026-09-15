@@ -5,7 +5,6 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,21 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
-	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/configloader"
 	"github.com/siderolabs/talos/pkg/machinery/config/configpatcher"
 	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
+	"github.com/siderolabs/talos/pkg/machinery/config/generate/stdpatches"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/network"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -467,7 +462,7 @@ func (r *TalosConfigReconciler) reconcileDelete(config *bootstrapv1beta1.TalosCo
 }
 
 func genTalosConfigFile(clusterName string, bundle *secrets.Bundle, endpoints []string) (string, error) {
-	in, err := generate.NewInput(clusterName, "https://localhost", "", generate.WithSecretsBundle(bundle), generate.WithEndpointList(endpoints))
+	in, err := generate.NewInput(clusterName, "https://localhost", constants.DefaultKubernetesVersion, generate.WithSecretsBundle(bundle), generate.WithEndpointList(endpoints))
 	if err != nil {
 		return "", err
 	}
@@ -496,8 +491,8 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 
 	// Create the secret with kubernetes certs so a kubeconfig can be generated
 	// but do this only when machineconfig contains full Kubernetes CA secret (controlplane nodes)
-	if userConfig.Cluster().IssuingCA() != nil && len(userConfig.Cluster().IssuingCA().Crt) > 0 && len(userConfig.Cluster().IssuingCA().Key) > 0 {
-		if err = r.writeK8sCASecret(ctx, scope, userConfig.Cluster().IssuingCA()); err != nil {
+	if userConfig.K8sAPIServerCAConfig() != nil && userConfig.K8sAPIServerCAConfig().IssuingCA() != nil && len(userConfig.K8sAPIServerCAConfig().IssuingCA().Crt) > 0 && len(userConfig.K8sAPIServerCAConfig().IssuingCA().Key) > 0 {
+		if err = r.writeK8sCASecret(ctx, scope, userConfig.K8sAPIServerCAConfig().IssuingCA()); err != nil {
 			return retBundle, err
 		}
 	}
@@ -510,9 +505,12 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 	retBundle.BootstrapData = userConfigStr
 
 	if userConfig.Machine().Security().IssuingCA() != nil && len(userConfig.Machine().Security().IssuingCA().Crt) > 0 && len(userConfig.Machine().Security().IssuingCA().Key) > 0 {
-		bundle := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), userConfig)
+		bundle, err := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), userConfig)
+		if err != nil {
+			return retBundle, err
+		}
 
-		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.Cluster().Name(), bundle, nil)
+		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.K8sClusterConfig().ClusterName(), bundle, nil)
 		if err != nil {
 			r.Log.Error(err, "failed generating talosconfig for user-supplied machine configuration")
 		}
@@ -615,31 +613,32 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 		return retBundle, patches, err
 	}
 
-	if scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks != nil {
-		data.RawV1Alpha1().ClusterConfig.ClusterNetwork.PodSubnet = scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
+	podSubnets := []string{constants.DefaultIPv4PodCIDR}
+	serviceSubnets := []string{constants.DefaultIPv4ServiceCIDR}
+
+	if len(scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
+		podSubnets = scope.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks
 	}
-	if scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks != nil {
-		data.RawV1Alpha1().ClusterConfig.ClusterNetwork.ServiceSubnet = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
+
+	if len(scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
+		serviceSubnets = scope.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks
 	}
+
+	podSubnetPatch, err := patchPodServiceSubnets(versionContract, podSubnets, serviceSubnets)
+	if err != nil {
+		return retBundle, patches, err
+	}
+
+	patches = append(patches, string(podSubnetPatch))
 
 	if !scope.ConfigOwner.IsMachinePool() && scope.Config.Spec.Hostname.Source != "" {
-		if data.RawV1Alpha1().MachineConfig.MachineNetwork == nil {
-			data.RawV1Alpha1().MachineConfig.MachineNetwork = &v1alpha1.NetworkConfig{}
-		}
-
-		talosVersion, parseErr := semver.NewVersion(strings.TrimLeft(scope.Config.Spec.TalosVersion, "v"))
-
 		if scope.Config.Spec.Hostname.Source == bootstrapv1beta1.HostnameSourceMachineName {
-			if parseErr == nil && talosVersion.GreaterThanEqual(semver.MustParse("1.12.0-beta.0")) {
-				hostnameCfg, err := newHostnameConfig(scope.ConfigOwner.GetName())
-				if err != nil {
-					return retBundle, patches, err
-				}
-
-				patches = append(patches, hostnameCfg)
-			} else {
-				data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = scope.ConfigOwner.GetName()
+			hostnamePatch, err := stdpatches.WithStaticHostname(versionContract, scope.ConfigOwner.GetName())
+			if err != nil {
+				return retBundle, patches, err
 			}
+
+			patches = append(patches, string(hostnamePatch))
 		}
 
 		if scope.Config.Spec.Hostname.Source == bootstrapv1beta1.HostnameSourceInfrastructureName {
@@ -648,16 +647,12 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 				return retBundle, patches, err
 			}
 
-			if parseErr == nil && talosVersion.GreaterThanEqual(semver.MustParse("1.12.0-beta.0")) {
-				hostnameCfg, err := newHostnameConfig(machine.Spec.InfrastructureRef.Name)
-				if err != nil {
-					return retBundle, patches, err
-				}
-
-				patches = append(patches, hostnameCfg)
-			} else {
-				data.RawV1Alpha1().MachineConfig.MachineNetwork.NetworkHostname = machine.Spec.InfrastructureRef.Name
+			hostnamePatch, err := stdpatches.WithStaticHostname(versionContract, machine.Spec.InfrastructureRef.Name)
+			if err != nil {
+				return retBundle, patches, err
 			}
+
+			patches = append(patches, string(hostnamePatch))
 		}
 	}
 
@@ -665,6 +660,8 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	if err != nil {
 		return retBundle, patches, err
 	}
+
+	r.Log.Info("patches are", "patches", patches)
 
 	retBundle.BootstrapData = dataOut
 
@@ -750,16 +747,4 @@ func (r *TalosConfigReconciler) ClusterToTalosConfigs(ctx context.Context, o cli
 	}
 
 	return result
-}
-
-func newHostnameConfig(hostname string) (string, error) {
-	hostnameConfig := network.NewHostnameConfigV1Alpha1()
-	hostnameConfig.ConfigAuto = pointer.To(nethelpers.AutoHostnameKindOff)
-	hostnameConfig.ConfigHostname = hostname
-
-	buf := new(bytes.Buffer)
-
-	err := yaml.NewEncoder(buf).Encode(hostnameConfig)
-
-	return buf.String(), err
 }
