@@ -13,11 +13,13 @@ import (
 	"time"
 
 	bootstrapv1alpha3 "github.com/siderolabs/cluster-api-bootstrap-provider-talos/api/v1alpha3"
+	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/config"
 	"github.com/siderolabs/talos/pkg/machinery/config/encoder"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate"
 	"github.com/siderolabs/talos/pkg/machinery/config/generate/secrets"
 	talosmachine "github.com/siderolabs/talos/pkg/machinery/config/machine"
+	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -148,41 +150,47 @@ func TestIntegration(t *testing.T) {
 	t.Run("ClusterSpec", func(t *testing.T) {
 		t.Parallel()
 
-		namespaceName := setupTest(ctx, t, c)
-		cluster := createCluster(ctx, t, c, namespaceName, &capiv1.ClusterSpec{
-			ClusterNetwork: &capiv1.ClusterNetwork{
-				Services: &capiv1.NetworkRanges{
-					CIDRBlocks: []string{
-						"192.168.0.0/16",
-						"fdaa:bbbb:cccc:15::/64",
-					},
-				},
-				Pods: &capiv1.NetworkRanges{
-					CIDRBlocks: []string{
-						"10.0.0.0/16",
-						"fdbb:bbbb:cccc:15::/64",
-					},
-				},
-				ServiceDomain: "mycluster.local",
-			},
-			ControlPlaneEndpoint: capiv1.APIEndpoint{
-				Host: "example.com",
-				Port: 443,
-			},
-		})
-		talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
-			GenerateType: talosmachine.TypeInit.String(),
-			TalosVersion: TalosVersion,
-		})
-		createMachine(ctx, t, c, cluster, talosConfig, true)
-		waitForReady(ctx, t, c, talosConfig)
+		for _, talosVersion := range []string{TalosVersion, "v1.13"} {
+			t.Run(talosVersion, func(t *testing.T) {
+				t.Parallel()
 
-		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+				namespaceName := setupTest(ctx, t, c)
+				cluster := createCluster(ctx, t, c, namespaceName, &capiv1.ClusterSpec{
+					ClusterNetwork: &capiv1.ClusterNetwork{
+						Services: &capiv1.NetworkRanges{
+							CIDRBlocks: []string{
+								"192.168.0.0/16",
+								"fdaa:bbbb:cccc:15::/108",
+							},
+						},
+						Pods: &capiv1.NetworkRanges{
+							CIDRBlocks: []string{
+								"10.0.0.0/16",
+								"fdbb:bbbb:cccc:15::/64",
+							},
+						},
+						ServiceDomain: "mycluster.local",
+					},
+					ControlPlaneEndpoint: capiv1.APIEndpoint{
+						Host: "example.com",
+						Port: 443,
+					},
+				})
+				talosConfig := createTalosConfig(ctx, t, c, namespaceName, bootstrapv1alpha3.TalosConfigSpec{
+					GenerateType: talosmachine.TypeInit.String(),
+					TalosVersion: talosVersion,
+				})
+				createMachine(ctx, t, c, cluster, talosConfig, true)
+				waitForReady(ctx, t, c, talosConfig)
 
-		assert.Equal(t, "https://example.com:443", provider.Cluster().Endpoint().String())
-		assert.Equal(t, "mycluster.local", provider.Cluster().Network().DNSDomain())
-		assert.Equal(t, "10.0.0.0/16,fdbb:bbbb:cccc:15::/64", strings.Join(provider.Cluster().Network().PodCIDRs(), ","))
-		assert.Equal(t, "192.168.0.0/16,fdaa:bbbb:cccc:15::/64", strings.Join(provider.Cluster().Network().ServiceCIDRs(), ","))
+				provider := assertMachineConfiguration(ctx, t, c, talosConfig)
+
+				assert.Equal(t, "https://example.com:443", provider.K8sClusterConfig().ClusterEndpoint().String())
+				assert.Equal(t, "mycluster.local", provider.K8sNetworkConfig().DNSDomain())
+				assert.Equal(t, "10.0.0.0/16,fdbb:bbbb:cccc:15::/64", strings.Join(xslices.Map(provider.K8sNetworkConfig().PodCIDRs(), netip.Prefix.String), ","))
+				assert.Equal(t, "192.168.0.0/16,fdaa:bbbb:cccc:15::/108", strings.Join(xslices.Map(provider.K8sNetworkConfig().ServiceCIDRs(), netip.Prefix.String), ","))
+			})
+		}
 	})
 
 	t.Run("StrategicMergePatch", func(t *testing.T) {
@@ -219,7 +227,7 @@ func TestIntegration(t *testing.T) {
 			GenerateType: talosmachine.TypeInit.String(),
 			TalosVersion: TalosVersion,
 			StrategicPatches: []string{
-				"cluster:\n  apiServer:\n    admissionControl:\n      - name: PodSecurity\n        $patch: delete\n",
+				"apiVersion: v1alpha1\nkind: KubeAdmissionControlConfig\nname: PodSecurity\n$patch: delete\n",
 			},
 		})
 
@@ -228,7 +236,7 @@ func TestIntegration(t *testing.T) {
 
 		provider := assertMachineConfiguration(ctx, t, c, talosConfig)
 
-		assert.Empty(t, provider.Cluster().APIServer().AdmissionControl())
+		assert.Empty(t, provider.K8sAdmissionControlPluginConfigs())
 	})
 
 	t.Run("LegacyClusterSecret", func(t *testing.T) {
@@ -266,7 +274,7 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "o19zh7.yv7rxce3lsptnme9", provider.Machine().Security().Token())
 		assert.Equal(t, "5dwzrh", provider.Cluster().Token().ID())
 		assert.Equal(t, "5ms9d5eke1muskrg", provider.Cluster().Token().Secret())
-		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nMIIBiTCCAS+gAwIBAgIQM4a04RExgV7BBZ2qmazx3TAKBggqhkjOPQQDBDAVMRMw\nEQYDVQQKEwprdWJlcm5ldGVzMB4XDTIxMDkyMDE4NDE0OVoXDTMxMDkxODE4NDE0\nOVowFTETMBEGA1UEChMKa3ViZXJuZXRlczBZMBMGByqGSM49AgEGCCqGSM49AwEH\nA0IABLezryg3QXmplOVP7+ap/ZTQCSlL3qiOeV7m3G8w8rvRaf+La9D0fCVJ9Rj/\nTyuuQFxQ203oeXPIfmE9HqtdjwqjYTBfMA4GA1UdDwEB/wQEAwIChDAdBgNVHSUE\nFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4E\nFgQUW0vg9AdP/ZK5+yR/73BpfvPRHMkwCgYIKoZIzj0EAwQDSAAwRQIgdvTMbjH+\n4XOMZzFIDjnq42I/suDw4cnGXcrlWdJ+aZYCIQDurrEAKmPrMgNqT2wP6JWYylla\n3l7yV8hS5CgCpJTaEg==\n-----END CERTIFICATE-----\n", string(provider.Cluster().IssuingCA().Crt)) //nolint:lll
+		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nMIIBiTCCAS+gAwIBAgIQM4a04RExgV7BBZ2qmazx3TAKBggqhkjOPQQDBDAVMRMw\nEQYDVQQKEwprdWJlcm5ldGVzMB4XDTIxMDkyMDE4NDE0OVoXDTMxMDkxODE4NDE0\nOVowFTETMBEGA1UEChMKa3ViZXJuZXRlczBZMBMGByqGSM49AgEGCCqGSM49AwEH\nA0IABLezryg3QXmplOVP7+ap/ZTQCSlL3qiOeV7m3G8w8rvRaf+La9D0fCVJ9Rj/\nTyuuQFxQ203oeXPIfmE9HqtdjwqjYTBfMA4GA1UdDwEB/wQEAwIChDAdBgNVHSUE\nFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4E\nFgQUW0vg9AdP/ZK5+yR/73BpfvPRHMkwCgYIKoZIzj0EAwQDSAAwRQIgdvTMbjH+\n4XOMZzFIDjnq42I/suDw4cnGXcrlWdJ+aZYCIQDurrEAKmPrMgNqT2wP6JWYylla\n3l7yV8hS5CgCpJTaEg==\n-----END CERTIFICATE-----\n", string(provider.K8sAPIServerCAConfig().IssuingCA().Crt)) //nolint:lll
 		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nMIIBPzCB8qADAgECAhEArv8iYjWXC8Mataa8e2pezDAFBgMrZXAwEDEOMAwGA1UE\nChMFdGFsb3MwHhcNMjEwOTIwMTg0MTQ5WhcNMzEwOTE4MTg0MTQ5WjAQMQ4wDAYD\nVQQKEwV0YWxvczAqMAUGAytlcAMhAOCRMlGNjsdQmgls2PCSgMdMeAIB8fAKsnCp\naXX3rfUKo2EwXzAOBgNVHQ8BAf8EBAMCAoQwHQYDVR0lBBYwFAYIKwYBBQUHAwEG\nCCsGAQUFBwMCMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFIDgT1HeMDtWHHXl\nmVhYqUPDU0JoMAUGAytlcANBAD2GLO2vG9MHGxt9658X4xZLSYNldAgDy2tHmZ7l\nnAjAR0npZoQXBVhorrQEcea7g6To9BDmtzrF0StW895d0Ak=\n-----END CERTIFICATE-----\n", string(provider.Machine().Security().IssuingCA().Crt))
 	})
 
@@ -279,7 +287,7 @@ func TestIntegration(t *testing.T) {
 		secretsBundle, err := secrets.NewBundle(secrets.NewFixedClock(time.Now()), config.TalosVersionCurrent)
 		require.NoError(t, err)
 
-		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", "v1.22.2", generate.WithSecretsBundle(secretsBundle))
+		input, err := generate.NewInput(cluster.Name, "https://example.com:6443/", constants.DefaultKubernetesVersion, generate.WithSecretsBundle(secretsBundle))
 		require.NoError(t, err)
 
 		workers := []*bootstrapv1alpha3.TalosConfig{}

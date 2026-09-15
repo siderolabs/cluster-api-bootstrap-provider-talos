@@ -9,10 +9,10 @@ NAME := cluster-api-talos-controller
 ARTIFACTS := _out
 TEST_RUN ?= ./...
 
-TOOLS ?= ghcr.io/siderolabs/tools:v1.13.0
-PKGS ?= v1.13.0
-TALOS_VERSION ?= v1.13.0
-K8S_VERSION ?= 1.35.0
+TOOLS ?= ghcr.io/siderolabs/tools:v1.14.0
+PKGS ?= v1.14.0
+TALOS_VERSION ?= v1.14.0
+K8S_VERSION ?= 1.36.0
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 

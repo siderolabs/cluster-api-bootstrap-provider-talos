@@ -56,7 +56,7 @@ func generateName(t *testing.T, kind string) string {
 		time.Duration(now.Nanosecond())
 	n := clock / time.Microsecond
 
-	name := fmt.Sprintf("%s-%s-%d", strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-"), kind, n)
+	name := fmt.Sprintf("%s-%s-%d", strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-"), ".", "-"), kind, n)
 	if len(name) > 63 {
 		name = name[:63]
 	}

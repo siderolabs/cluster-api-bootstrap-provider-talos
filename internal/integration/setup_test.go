@@ -201,47 +201,25 @@ func setupTest(ctx context.Context, t *testing.T, c client.Client) string {
 func installCAPI(ctx context.Context, t *testing.T) {
 	t.Helper()
 
-	// Run InitImages / Init in the goroutine to handle context cancelation.
-	// t.FailNow() should be called in the main goroutine.
-	initErr := make(chan error, 1)
-	go func() {
-		clusterctlClient, err := clusterctlclient.New(ctx, "")
-		if err != nil {
-			initErr <- err
-			return
-		}
+	clusterctlClient, err := clusterctlclient.New(ctx, "")
+	require.NoError(t, err, "failed to create clusterctl client")
 
-		t.Log("Getting CAPI core components versions ...")
+	t.Log("Getting CAPI core components versions ...")
 
-		initOpts := clusterctlclient.InitOptions{
-			BootstrapProviders:      []string{clusterctlclient.NoopProvider},
-			InfrastructureProviders: []string{clusterctlclient.NoopProvider},
-			ControlPlaneProviders:   []string{clusterctlclient.NoopProvider},
-		}
-
-		if false {
-			// TODO: InitImages is broken in upstream, see https://github.com/kubernetes-sigs/cluster-api/issues/6986
-			images, err := clusterctlClient.InitImages(ctx, initOpts)
-			if err != nil {
-				initErr <- err
-				return
-			}
-
-			t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
-		}
-
-		_, err = clusterctlClient.Init(ctx, initOpts)
-		initErr <- err
-	}()
-
-	var err error
-	select {
-	case err = <-initErr:
-	case <-ctx.Done():
-		err = ctx.Err()
+	initOpts := clusterctlclient.InitOptions{
+		BootstrapProviders:      []string{clusterctlclient.NoopProvider},
+		InfrastructureProviders: []string{clusterctlclient.NoopProvider},
+		ControlPlaneProviders:   []string{clusterctlclient.NoopProvider},
+		WaitProviders:           true,
 	}
 
-	require.NoError(t, err, "failed to install CAPI core components")
+	images, err := clusterctlClient.InitImages(ctx, initOpts)
+	require.NoError(t, err, "failed to init images")
+
+	t.Logf("Installing CAPI core components: %s ...", strings.Join(images, ", "))
+
+	_, err = clusterctlClient.Init(ctx, initOpts)
+	require.NoError(t, err, "failed to install Cluster API")
 
 	t.Log("Done installing CAPI core components.")
 }

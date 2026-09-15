@@ -6,14 +6,14 @@ github_repo = "siderolabs/cluster-api-bootstrap-provider-talos"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous release
-previous = "v0.6.11"
+previous = "v0.6.12"
 
 pre_release = false
 
 [notes.Talos]
-    title = "Talos 1.13"
+    title = "Talos 1.14"
     description = """\
-CABPT is now compatible with Talos v1.13.0+.
+CABPT is now compatible with Talos v1.14.0+.
 """
 
 preface = """\

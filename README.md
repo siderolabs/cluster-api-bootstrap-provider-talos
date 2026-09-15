@@ -54,17 +54,17 @@ This provider's versions are compatible with the following versions of Cluster A
 
 This provider's versions are able to install and manage the following versions of Kubernetes:
 
-|                | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 | v1.24 | v1.25 | v1.26 | v1.27 | v1.28 | v1.29 | v1.30 | v1.31 | v1.32 | v1.33 | v1.34 | v1.35 | v1.36 |
-| -------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.5.x) | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |       |       |
-| CABPT (v0.6.x) |       |       |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
+|                | v1.19 | v1.20 | v1.21 | v1.22 | v1.23 | v1.24 | v1.25 | v1.26 | v1.27 | v1.28 | v1.29 | v1.30 | v1.31 | v1.32 | v1.33 | v1.34 | v1.35 | v1.36 | v1.37 |
+| -------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.5.x) | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |       |       |       |
+| CABPT (v0.6.x) |       |       |       |       |       |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 This provider's versions are compatible with the following versions of Talos:
 
-|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  | v1.6  | v1.7  | v1.8  | v1.9  | v1.10 | v1.11 | v1.12 | v1.13 |
-| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
-| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |       |       |
-| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
+|                  | v1.0  | v1.1  | v1.2  | v1.3  | v1.4  | v1.5  | v1.6  | v1.7  | v1.8  | v1.9  | v1.10 | v1.11 | v1.12 | v1.13 | v1.14 |
+| ---------------- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| CABPT (v0.5.x)   | ✓     | ✓     | ✓     | ✓     |       |       |       |       |       |       |       |       |       |       |       |
+| CABPT (v0.6.x)   |       |       | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     | ✓     |
 
 CABPT generates machine configuration compatible with Talos Linux version specified in the `talosVersion:` field (see below).
 
@@ -141,57 +141,29 @@ spec:
 ### Configuration Patches
 
 Machine configuration can be customized by applying configuration patches.
-Any field of the [Talos machine configuration](https://www.talos.dev/docs/latest/reference/configuration/)
+Any field of the [Talos machine configuration](https://docs.siderolabs.com/talos/v1.14/reference/configuration/overview)
 can be overridden on a per-machine basis using this method.
 
-There are two [patch formats](https://www.talos.dev/latest/talos-guides/configuration/patching/) supported by CABPT:
+See [Talos Linux documentation](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/system-configuration/patching) for more information on patching.
 
-- the [JSON 6902](http://jsonpatch.com/) format that you may be used to in tools like `kustomize`;
-- strategic merge patches which look like incomplete machine configuration documents.
-
-See Talos Linux documentation for more information on patching.
-
-> [!IMPORTANT]
-> JSON patches are not compatible with multi-document Talos Linux machine configuration.
-> JSON patches are not compatible with Talos Linux >= 1.12.
-
-JSON 6902 patch:
+Example (following Talos 1.14+ syntax, see documentation for older versions for other syntax):
 
 ```yaml
 spec:
   generateType: controlplane
-  talosVersion: v1.6
-  configPatches:
-    - op: replace
-      path: /machine/install
-      value:
-        disk: /dev/sda
-    - op: add
-      path: /cluster/network/cni
-      value:
-        name: custom
-        urls:
-          - https://docs.projectcalico.org/v3.18/manifests/calico.yaml
-```
-
-Strategic merge patch:
-
-```yaml
-spec:
-  generateType: controlplane
-  talosVersion: v1.6
+  talosVersion: v1.14
   strategicPatches:
     - |
-      machine:
-        install:
-          disk: /dev/sda
+      apiVersion: v1alpha1
+      kind: UnattendedInstallConfig
+      provisioning:
+        diskSelector:
+            match: disk.dev_path == "/dev/sda"
     - |
-      cluster:
-        network:
-          cni:
-            name: custom
-            urls:
-              - https://docs.projectcalico.org/v3.18/manifests/calico.yaml
+      # disable Flannel CNI
+      apiVersion: v1alpha1
+      kind: KubeFlannelCNIConfig
+      $patch: delete
 ```
 
 ### Retrieving `talosconfig`
