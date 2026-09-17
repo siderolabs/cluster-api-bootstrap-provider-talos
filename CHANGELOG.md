@@ -1,3 +1,135 @@
+## [CAPI Bootstrap Provider Talos 0.7.0-alpha.3](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.7.0-alpha.3) (2026-09-17)
+
+Welcome to the v0.7.0-alpha.3 release of CAPI Bootstrap Provider Talos!  
+*This is a pre-release of CAPI Bootstrap Provider Talos*
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/issues.
+
+### CAPI
+
+CABPT is now compatible with CAPI v1.12.0+ (v1beta2).
+
+
+### Talos 1.14
+
+CABPT is now compatible with Talos v1.14.0+.
+
+
+### Contributors
+
+* Dmitriy Matrenichev
+* Andrey Smirnov
+* Artem Chernyshev
+* Jedrzej Kotkowski
+* Utku Ozdemir
+* Andrey Smirnov
+* Dmitriy Matrenichev
+* Junior Rantila
+* Mark Glants
+* Mateusz Urbanek
+* Steffen Karlsson
+* Sting Alleman
+
+### Changes
+<details><summary>12 commits</summary>
+<p>
+
+* [`bdc9245`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/bdc9245f58b15289ef9bb13398fa7f309aea9fd1) feat: update to Talos 1.14 contract
+* [`855be5e`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/855be5eb428593eaa18a15530f07121c4a97c1e8) docs: add deprecation notice to the README
+* [`fcd4753`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/fcd4753c6888fd7e5a8f7c42f63da2b0d33e2ba0) fix: bypass immutability check for topology dry-run
+* [`e21a01e`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/e21a01e06ee321cd1ae9b57ba6a45493eb492396) release(v0.7.0-alpha.2): prepare release
+* [`5d3dce5`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/5d3dce55cdb5ef58f4e17088dab4f85cdcf963fd) feat: update to Talos 1.13.0 final
+* [`1f98f53`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/1f98f533c6f610bd31b0b8c25ae4400a3bd28bd8) feat: add support for Talos 1.13 machinery
+* [`407ec9b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/407ec9b13dba61c4f3bffe9868dfcafc7b8dd6dc) chore: bump controller-runtime v0.22.5 => v0.23.3
+* [`14b2c72`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/14b2c7263838868a52ac17e0d6b33f3fbf021b7c) release(v0.7.0-alpha.1): prepare release
+* [`12f2cd1`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/12f2cd19127f7fcd27c1795ed8ac7b7f4be3e87e) feat: implement CAPI v1beta2 contract, new talosconfig v1beta1 API version
+* [`f1a2e0b`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/f1a2e0b1b728ebbe6fca439054d803c419ee9022) fix: rbac for machinepools
+* [`0d8612c`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/0d8612c8bd8a35642d6b8144b7e21e50b6c084ee) release(v0.7.0-alpha.0): prepare release
+* [`d585115`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/d58511566c893addc32ebcbd5db584437834e8cb) feat: upgrade to CAPI v1.12.x
+</p>
+</details>
+
+### Changes since v0.7.0-alpha.4
+<details><summary>3 commits</summary>
+<p>
+
+* [`bdc9245`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/bdc9245f58b15289ef9bb13398fa7f309aea9fd1) feat: update to Talos 1.14 contract
+* [`855be5e`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/855be5eb428593eaa18a15530f07121c4a97c1e8) docs: add deprecation notice to the README
+* [`fcd4753`](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/commit/fcd4753c6888fd7e5a8f7c42f63da2b0d33e2ba0) fix: bypass immutability check for topology dry-run
+</p>
+</details>
+
+### Changes from siderolabs/crypto
+<details><summary>1 commit</summary>
+<p>
+
+* [`6d82f0c`](https://github.com/siderolabs/crypto/commit/6d82f0cf90e9e9b41c5d1cec7d011361ef4649aa) fix: bump minimum TLS version to v1.3
+</p>
+</details>
+
+### Changes from siderolabs/gen
+<details><summary>30 commits</summary>
+<p>
+
+* [`cbd9518`](https://github.com/siderolabs/gen/commit/cbd9518a7bc6d70cf85390c1f6109c8236ba2a49) chore: rekres and update deps
+* [`26ccee1`](https://github.com/siderolabs/gen/commit/26ccee180839c57d9e2e4fcdf37e4753fc0feb25) feat: provide new YAMl unmarshal validator for null values
+* [`c526410`](https://github.com/siderolabs/gen/commit/c526410f8c26b75ab386877036d4855098f9c429) fix: skip unknown-key check for types with custom YAML unmarshaler
+* [`4c7388b`](https://github.com/siderolabs/gen/commit/4c7388b6a09d6a2ab6a380541df7a5b4bcc4b241) chore: update Go modules, replace YAML library
+* [`044d921`](https://github.com/siderolabs/gen/commit/044d921685bbd8b603a64175ea63b07efe9a64a7) feat: add xslices.Deduplicate
+* [`dcb2b74`](https://github.com/siderolabs/gen/commit/dcb2b7417879f230a569ce834dad5c89bd09d6bf) feat: add `panicsafe` package
+* [`b36ee43`](https://github.com/siderolabs/gen/commit/b36ee43f667a7a56b340a3e769868ff2a609bb5b) feat: make `xyaml.CheckUnknownKeys` public
+* [`3e319e7`](https://github.com/siderolabs/gen/commit/3e319e7e52c5a74d1730be8e47952b3d16d91148) feat: implement `xyaml.UnmarshalStrict`
+* [`7c0324f`](https://github.com/siderolabs/gen/commit/7c0324fee9a7cfbdd117f43702fa273689f0db97) chore: future-proof HashTrieMap
+* [`5ae3afe`](https://github.com/siderolabs/gen/commit/5ae3afee65490ca9f4bd32ea41803ab3a17cad7e) chore: update hashtriemap implementation from the latest upstream
+* [`e847d2a`](https://github.com/siderolabs/gen/commit/e847d2ace9ede4a17283426dfbc8229121f2909b) chore: add more utilities to xiter
+* [`f3c5a2b`](https://github.com/siderolabs/gen/commit/f3c5a2b5aba74e4935d073a0135c4904ef3bbfef) chore: add `Empty` and `Empty2` iterators
+* [`c53b90b`](https://github.com/siderolabs/gen/commit/c53b90b4a418b8629d938af06900249ce5acd9e6) chore: add packages xiter/xstrings/xbytes
+* [`7654108`](https://github.com/siderolabs/gen/commit/7654108fe6ae15d4765584342709bc0bced6b3d6) chore: add hashtriemap implementation
+* [`8485864`](https://github.com/siderolabs/gen/commit/84858640dc9c3032219380885283b995d4f2b0d1) chore: optimize maps.Values and maps.Keys
+* [`238baf9`](https://github.com/siderolabs/gen/commit/238baf95e228d40f9f5b765b346688c704052715) chore: add typesafe `SyncMap` and bump stuff
+* [`efca710`](https://github.com/siderolabs/gen/commit/efca710d509e6088d7a1a825bd49317df1427639) chore: add `FilterInPlace` method to maps and update module
+* [`36a3ae3`](https://github.com/siderolabs/gen/commit/36a3ae312ce03876b2c961a1bcb4ef4c221593d7) feat: update module
+* [`f9f5805`](https://github.com/siderolabs/gen/commit/f9f5805973d30fe6bbac2f4a79ad4197fe59970e) chore: bump rekres and add functions from exp
+* [`b968d21`](https://github.com/siderolabs/gen/commit/b968d21c9671d97e54317f80cdf781d6f963e44b) feat: add `TryRecv` and `RecvWithContext` functions
+* [`476dfea`](https://github.com/siderolabs/gen/commit/476dfeae70882e1ca6e5cfed3d6e12dc36841a26) feat: add foreach and clear to lazymap
+* [`214c1ef`](https://github.com/siderolabs/gen/commit/214c1efe795cf426e5ebcc48cb305bfc7a16fdb8) chore: set `slice.Filter` result slice cap to len
+* [`8e89b1e`](https://github.com/siderolabs/gen/commit/8e89b1ede9f35ff4c18a41ee44a69259181c892b) feat: add GetOrCreate and GetOrCall methods
+* [`7c7ccc3`](https://github.com/siderolabs/gen/commit/7c7ccc3d973621b2fa7adfef10241ecc1f7a644d) feat: introduce channel SendWithContext
+* [`b3b6db8`](https://github.com/siderolabs/gen/commit/b3b6db858cb6ce46005edeb70776608e3f9bc402) fix: fix Copy documentation and implementation
+* [`521f737`](https://github.com/siderolabs/gen/commit/521f7371f40556ddce7f730c8de5e1888e40b621) feat: add xerrors package which contains additions to the std errors
+* [`726e066`](https://github.com/siderolabs/gen/commit/726e066dcb35c86f82866097bed806f22b936292) fix: rename tuples.go to pair.go and set proper package name
+* [`d8d7d25`](https://github.com/siderolabs/gen/commit/d8d7d25ce9a588609c00cb798206a01a866bf7a6) chore: minor additions
+* [`338a650`](https://github.com/siderolabs/gen/commit/338a65065f92eb6426a66c4a88a0cc02cc02e529) chore: add initial implementation and documentation
+* [`4fd8667`](https://github.com/siderolabs/gen/commit/4fd866707052c792a6adccbc28efec5debdd18a8) Initial commit
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/Masterminds/semver/v3**           v3.3.0 -> v3.4.0
+* **github.com/go-logr/logr**                    v1.4.3 -> v1.4.4
+* **github.com/siderolabs/crypto**               v0.6.4 -> v0.6.5
+* **github.com/siderolabs/gen**                  v0.8.8 **_new_**
+* **github.com/siderolabs/talos/pkg/machinery**  v1.12.0 -> v1.14.1
+* **github.com/spf13/pflag**                     v1.0.7 -> v1.0.10
+* **github.com/stretchr/testify**                v1.11.1 -> v1.12.1
+* **golang.org/x/sys**                           v0.38.0 -> v0.48.0
+* **k8s.io/api**                                 v0.32.3 -> v0.35.3
+* **k8s.io/apiextensions-apiserver**             v0.32.3 -> v0.35.3
+* **k8s.io/apimachinery**                        v0.32.3 -> v0.35.3
+* **k8s.io/client-go**                           v0.32.3 -> v0.35.3
+* **k8s.io/component-base**                      v0.32.3 -> v0.35.3
+* **k8s.io/klog/v2**                             v2.130.1 -> v2.140.0
+* **k8s.io/utils**                               28399d86e0b5 **_new_**
+* **sigs.k8s.io/cluster-api**                    v1.10.9 -> v1.12.11
+* **sigs.k8s.io/cluster-api/test**               v1.12.11 **_new_**
+* **sigs.k8s.io/controller-runtime**             v0.20.4 -> v0.23.3
+
+Previous release can be found at [v0.6.11](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.6.11)
+
 ## [CAPI Bootstrap Provider Talos 0.7.0-alpha.2](https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/tag/v0.7.0-alpha.2) (2026-04-27)
 
 Welcome to the v0.7.0-alpha.2 release of CAPI Bootstrap Provider Talos!  
