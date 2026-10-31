@@ -9,6 +9,7 @@ spec:
     - skipPaths:
         - .git/
         - testdata/
+        - controllers/configowner.go
       includeSuffixes:
         - .go
       excludeSuffixes:

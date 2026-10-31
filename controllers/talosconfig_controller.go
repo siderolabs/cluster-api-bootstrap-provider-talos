@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	bsutil "sigs.k8s.io/cluster-api/bootstrap/util"
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
@@ -69,7 +68,7 @@ type TalosConfigReconciler struct {
 
 type TalosConfigScope struct {
 	Config      *bootstrapv1beta1.TalosConfig
-	ConfigOwner *bsutil.ConfigOwner
+	ConfigOwner *ConfigOwner
 	Cluster     *capiv1.Cluster
 }
 
@@ -186,7 +185,7 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Look up the resource that owns this talosconfig if there is one
-	owner, err := bsutil.GetConfigOwner(ctx, r.Client, config)
+	owner, err := GetConfigOwner(ctx, r.Client, config)
 	if err != nil {
 		log.Error(err, "could not get owner resource")
 		return ctrl.Result{}, err
