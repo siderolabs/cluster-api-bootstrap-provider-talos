@@ -31,6 +31,12 @@ rules:
 - apiGroups:
   - bootstrap.cluster.x-k8s.io
   resources:
+  - talosconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bootstrap.cluster.x-k8s.io
+  resources:
   - talosconfigs/status
   verbs:
   - get
@@ -49,3 +55,9 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters/finalizers
+  verbs:
+  - update

@@ -18,6 +18,23 @@ pre_release = true
 CABPT is now compatible with CAPI v1.12.0+ (v1beta2).
 """
 
+[notes.talosconfig]
+    title = "TalosConfig status.talosConfig removed"
+    description = """\
+TalosConfig no longer reports a talosconfig in `status.talosConfig`; the field is not part of the
+`v1beta1` API and stays empty when read through `v1alpha3`.
+Use the cluster-wide `<cluster-name>-talosconfig` secret instead (key `talosconfig`).
+"""
+
+[notes.deprecatedstatus]
+    title = "TalosConfig status.deprecated.v1beta1"
+    description = """\
+The deprecated v1beta1 status of TalosConfig `v1beta1` moved from `status.deprecated.v1beta` to
+`status.deprecated.v1beta1`, matching the Cluster API convention.
+When upgrading from any of v0.7.0-alpha.1 through v0.7.0-alpha.3, the old field is dropped and the deprecated
+conditions are reported again on the next reconciliation.
+"""
+
 [notes.Talos]
     title = "Talos 1.14"
     description = """\

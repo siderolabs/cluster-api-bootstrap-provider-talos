@@ -12,9 +12,3 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - bootstrap.cluster.x-k8s.io
-  resources:
-  - talosconfigtemplates/status
-  verbs:
-  - get

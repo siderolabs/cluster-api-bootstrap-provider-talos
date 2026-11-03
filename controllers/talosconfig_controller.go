@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
@@ -74,7 +73,6 @@ type TalosConfigScope struct {
 
 type TalosConfigBundle struct {
 	BootstrapData string
-	TalosConfig   string
 }
 
 func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
@@ -117,8 +115,10 @@ func (r *TalosConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=talosconfigs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;machines;machines/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machinepools;machinepools/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, rerr error) {
@@ -144,8 +144,16 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Always attempt to Patch the TalosConfig object and status after each reconciliation.
 	defer func() {
-		// always update the readyCondition; the summary is represented using the "1 of x completed" notation.
-		conditions.SetSummaryCondition(config, config, bootstrapv1beta1.DataSecretAvailableCondition)
+		// always update the readyCondition, summarizing the DataSecretAvailable condition.
+		// ClientConfigAvailable is excluded on purpose: the cluster-wide talosconfig is not needed to bootstrap
+		// a Machine, and Cluster API mirrors this condition into the Machine's BootstrapConfigReady condition.
+		if err := conditions.SetSummaryCondition(config, config, bootstrapv1beta1.TalosConfigReadyCondition,
+			conditions.ForConditionTypes{
+				bootstrapv1beta1.DataSecretAvailableCondition,
+			},
+		); err != nil {
+			rerr = errors.Join(rerr, err)
+		}
 		v1beta1conditions.SetSummary(config,
 			v1beta1conditions.WithConditions(
 				bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
@@ -155,12 +163,16 @@ func (r *TalosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{
 				Conditions: []string{
+					bootstrapv1beta1.TalosConfigReadyCondition,
 					bootstrapv1beta1.DataSecretAvailableCondition,
+					bootstrapv1beta1.ClientConfigAvailableCondition,
 				},
 			},
 			patch.WithOwnedV1Beta1Conditions{
 				Conditions: []capiv1.ConditionType{
+					capiv1.ReadyV1Beta1Condition,
 					bootstrapv1beta1.DataSecretAvailableV1Beta1Condition,
+					bootstrapv1beta1.ClientConfigAvailableV1Beta1Condition,
 				},
 			},
 		}
@@ -503,22 +515,10 @@ func (r *TalosConfigReconciler) userConfigs(ctx context.Context, scope *TalosCon
 
 	retBundle.BootstrapData = userConfigStr
 
-	if userConfig.Machine().Security().IssuingCA() != nil && len(userConfig.Machine().Security().IssuingCA().Crt) > 0 && len(userConfig.Machine().Security().IssuingCA().Key) > 0 {
-		bundle, err := secrets.NewBundleFromConfig(secrets.NewFixedClock(time.Now()), userConfig)
-		if err != nil {
-			return retBundle, err
-		}
-
-		retBundle.TalosConfig, err = genTalosConfigFile(userConfig.K8sClusterConfig().ClusterName(), bundle, nil)
-		if err != nil {
-			r.Log.Error(err, "failed generating talosconfig for user-supplied machine configuration")
-		}
-	}
-
 	return retBundle, nil
 }
 
-// genConfigs will generate a bootstrap config and a talosconfig to return
+// genConfigs will generate a bootstrap config to return
 func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConfigScope) (*TalosConfigBundle, []string, error) {
 	retBundle := &TalosConfigBundle{}
 
@@ -599,13 +599,6 @@ func (r *TalosConfigReconciler) genConfigs(ctx context.Context, scope *TalosConf
 	if err = r.writeK8sCASecret(ctx, scope, secretBundle.Certs.K8s); err != nil {
 		return retBundle, patches, err
 	}
-
-	tcString, err := genTalosConfigFile(input.ClusterName, secretBundle, nil)
-	if err != nil {
-		return retBundle, patches, err
-	}
-
-	retBundle.TalosConfig = tcString
 
 	data, err := input.Config(machineType)
 	if err != nil {

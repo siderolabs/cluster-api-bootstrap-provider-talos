@@ -15,7 +15,6 @@ type TalosConfigTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=talosconfigtemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:subresource:status
 
 // TalosConfigTemplate is the Schema for the talosconfigtemplates API
 type TalosConfigTemplate struct {

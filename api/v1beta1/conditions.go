@@ -9,7 +9,7 @@ import capiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 // Conditions and condition Reasons for the TalosConfig object
 
 const (
-	// TalosConfigReadyCondition condition is true when all ClientConfigAvailable and DataSecretAvailable conditions are true.
+	// TalosConfigReadyCondition condition is true when the DataSecretAvailable condition is true.
 	TalosConfigReadyCondition = capiv1.ReadyCondition
 
 	// TalosConfigReadyReason surfaces when TalosConfig is ready.

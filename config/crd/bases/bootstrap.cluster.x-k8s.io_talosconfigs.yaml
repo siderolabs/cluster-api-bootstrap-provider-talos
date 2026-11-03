@@ -414,7 +414,7 @@ spec:
                 description: deprecated groups all the status fields that are deprecated
                   and will be removed when all the nested field are removed.
                 properties:
-                  v1beta:
+                  v1beta1:
                     description: v1beta1 groups all the status fields that are deprecated
                       and will be removed when support for CAPI v1beta1 contract will
                       be dropped.

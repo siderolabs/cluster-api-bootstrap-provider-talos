@@ -60,6 +60,6 @@ There are sample manifests in [config/samples/cluster-deployment/gcp](../config/
 
 - From `config/samples/cluster-deployment/gcp` issue `kubectl apply -f .`.
 
-- The talos config for your controlplane-0 node can be found with `kubectl get talosconfig -o yaml test1-controlplane-0 -o jsonpath='{.status.talosConfig}'`.
+- The talos config for the cluster can be found with `kubectl get secret test1-talosconfig -o jsonpath='{.data.talosconfig}' | base64 -d`.
 
 - You must target the public IP of the controlplane-0 node (found in GCP console) with `osctl config target $EXTERNAL_IP` before osctl will work.

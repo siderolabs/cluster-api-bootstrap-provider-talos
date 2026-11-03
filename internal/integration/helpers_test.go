@@ -226,11 +226,10 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 		sleepCtx(ctx, 3*time.Second)
 	}
 
-	if ctx.Err() != nil {
-		return
-	}
+	require.NoError(t, ctx.Err(), "timed out waiting for TalosConfig to become ready")
 
 	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1beta1.DataSecretAvailableCondition))
+	assert.True(t, conditions.IsTrue(talosConfig, bootstrapv1beta1.TalosConfigReadyCondition))
 
 	if talosConfig.Spec.GenerateType == talosmachine.TypeInit.String() || talosConfig.Spec.GenerateType == talosmachine.TypeControlPlane.String() {
 		// wait for additional condition
@@ -246,6 +245,8 @@ func waitForReady(ctx context.Context, t *testing.T, c client.Client, talosConfi
 			t.Log("Waiting for talosconfig...")
 			sleepCtx(ctx, 3*time.Second)
 		}
+
+		require.NoError(t, ctx.Err(), "timed out waiting for TalosConfig client config")
 	}
 }
 

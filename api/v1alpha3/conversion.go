@@ -24,7 +24,7 @@ func (src *TalosConfig) ConvertTo(dstRaw conversion.Hub) error {
 	// Preserve Hub data on down-conversion.
 	restored := &bsv1beta1.TalosConfig{}
 	ok, err := utilconversion.UnmarshalData(src, restored)
-	if err != nil || !ok {
+	if err != nil {
 		return err
 	}
 
@@ -47,7 +47,7 @@ func (dst *TalosConfig) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 
 	// Preserve Hub data on down-conversion.
-	if err := utilconversion.MarshalData(src, dst); err != nil {
+	if err := utilconversion.MarshalDataUnsafeNoCopy(src, dst); err != nil {
 		return err
 	}
 
@@ -130,6 +130,11 @@ func Convert_v1beta1_TalosConfigStatus_To_v1alpha3_TalosConfigStatus(in *bsv1bet
 		}
 		out.FailureReason = in.Deprecated.V1Beta1.FailureReason
 		out.FailureMessage = in.Deprecated.V1Beta1.FailureMessage
+	}
+
+	// Do not convert an unset DataSecretName into a pointer to an empty string.
+	if in.DataSecretName == "" {
+		out.DataSecretName = nil
 	}
 
 	// Move initialization to old fields

@@ -102,7 +102,7 @@ type TalosConfigInitializationStatus struct {
 type TalosConfigDeprecatedStatus struct {
 	// v1beta1 groups all the status fields that are deprecated and will be removed when support for CAPI v1beta1 contract will be dropped.
 	// +optional
-	V1Beta1 *TalosConfigV1Beta1DeprecatedStatus `json:"v1beta,omitempty"`
+	V1Beta1 *TalosConfigV1Beta1DeprecatedStatus `json:"v1beta1,omitempty"`
 }
 
 // TalosConfigV1Beta1DeprecatedStatus groups all the status fields that are deprecated and will be removed when support for CAPI v1beta1 contract will be dropped.
