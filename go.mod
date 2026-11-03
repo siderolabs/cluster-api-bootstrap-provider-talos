@@ -6,7 +6,7 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
-	github.com/siderolabs/crypto v0.6.5
+	github.com/siderolabs/crypto v0.6.6
 	github.com/siderolabs/gen v0.8.8
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/talos/pkg/machinery v1.14.5
