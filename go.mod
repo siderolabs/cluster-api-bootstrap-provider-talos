@@ -9,10 +9,10 @@ require (
 	github.com/siderolabs/crypto v0.6.6
 	github.com/siderolabs/gen v0.8.8
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos/pkg/machinery v1.14.5
+	github.com/siderolabs/talos/pkg/machinery v1.14.6
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.37.2
 	k8s.io/apiextensions-apiserver v0.37.2
@@ -24,7 +24,7 @@ require (
 	sigs.k8s.io/cluster-api v1.14.4
 	sigs.k8s.io/cluster-api/api v1.14.4
 	sigs.k8s.io/cluster-api/test v1.14.4
-	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/controller-runtime v0.25.3
 	sigs.k8s.io/randfill v1.0.0
 )
 
@@ -130,11 +130,11 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.8 // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
-	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/term v0.46.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260810153831-ec0a7760b754 // indirect
